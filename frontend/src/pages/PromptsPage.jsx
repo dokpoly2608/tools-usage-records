@@ -1,5 +1,5 @@
 import { useNav } from '../nav.jsx';
-import { usePrompts } from '../api.js';
+import { usePrompts, useCategories } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
 import { extractVars } from '../components/TemplateModal.jsx';
@@ -10,12 +10,19 @@ const SOURCE_LABEL = {
   manual: '手动',
 };
 
-export default function PromptsPage({ source }) {
-  const { query, navigate } = useNav();
-  const debounced = useDebounce(query, 250);
-  const { data: prompts, isLoading } = usePrompts({ source, q: debounced });
+export default function PromptsPage({ category, q }) {
+  const { navigate } = useNav();
+  const debounced = useDebounce(q, 250);
+  const { data: prompts, isLoading } = usePrompts({ category, q: debounced });
+  const { data: categories } = useCategories();
 
-  const title = source ? SOURCE_LABEL[source] || source : '全部提示词';
+  // 分类名：'0' = 未分类；正数 = 该分类；无 = 全部
+  let title = '全部提示词';
+  if (category === '0') title = '未分类提示词';
+  else if (category) {
+    const c = categories?.find((x) => String(x.id) === String(category));
+    title = c ? c.name : '提示词';
+  }
 
   return (
     <div>
@@ -46,12 +53,15 @@ export default function PromptsPage({ source }) {
             return (
               <Card
                 key={p.id}
-                className="cursor-pointer p-4 transition hover:border-indigo-300 hover:shadow-md"
+                className="cursor-pointer p-4 transition hover:border-emerald-300 hover:shadow-md"
                 onClick={() => navigate(`#/prompt/${p.id}`)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                      {p.category_name && (
+                        <Badge className="bg-teal-50 text-teal-700">{p.category_name}</Badge>
+                      )}
                       <Badge className="bg-emerald-50 text-emerald-700">{SOURCE_LABEL[p.source] || p.source}</Badge>
                       {p.usage_count > 0 && (
                         <Badge className="bg-amber-50 text-amber-700" title="使用次数">⚡ {p.usage_count}</Badge>

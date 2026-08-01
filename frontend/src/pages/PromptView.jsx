@@ -46,6 +46,9 @@ export default function PromptView({ id }) {
 
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          {p.category_name && (
+            <Badge className="bg-teal-50 text-teal-700">{p.category_name}</Badge>
+          )}
           <Badge className="bg-emerald-50 text-emerald-700">{SOURCE_LABEL[p.source] || p.source}</Badge>
           {p.usage_count > 0 && <Badge className="bg-amber-50 text-amber-700">⚡ 使用 {p.usage_count} 次</Badge>}
           {p.tags?.map((t) => (

@@ -3,9 +3,9 @@ import { useEntries, useTools } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
 
-export default function HomePage({ toolId }) {
-  const { query, navigate } = useNav();
-  const debounced = useDebounce(query, 250);
+export default function HomePage({ toolId, q }) {
+  const { navigate } = useNav();
+  const debounced = useDebounce(q, 250);
   const { data: entries, isLoading } = useEntries({ tool: toolId, q: debounced });
   const { data: tools } = useTools();
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNav } from '../nav.jsx';
-import { usePrompt, useCreatePrompt, useUpdatePrompt } from '../api.js';
+import { usePrompt, useCreatePrompt, useUpdatePrompt, useCategories } from '../api.js';
 import { Button, Input, Textarea, Select, Label, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
 import { extractVars, renderTemplate } from '../components/TemplateModal.jsx';
@@ -9,6 +9,9 @@ const EMPTY = {
   title: '',
   purpose: '',
   source: 'manual',
+  catMode: 'existing',
+  category_id: '',
+  category_name: '',
   tagsText: '',
   content: '',
   varDesc: {}, // name -> desc
@@ -18,6 +21,7 @@ export default function PromptForm({ id }) {
   const isEdit = !!id;
   const { navigate } = useNav();
   const { data: existing, isLoading } = usePrompt(id);
+  const { data: categories } = useCategories();
   const create = useCreatePrompt();
   const update = useUpdatePrompt();
 
@@ -31,6 +35,9 @@ export default function PromptForm({ id }) {
         title: existing.title || '',
         purpose: existing.purpose || '',
         source: existing.source || 'manual',
+        catMode: 'existing',
+        category_id: existing.category_id ? String(existing.category_id) : '',
+        category_name: '',
         tagsText: (existing.tags || []).join(', '),
         content: existing.content || '',
         varDesc,
@@ -58,6 +65,14 @@ export default function PromptForm({ id }) {
       tags,
       variables,
     };
+    // 分类
+    if (form.catMode === 'existing') {
+      payload.category_id = form.category_id ? Number(form.category_id) : null;
+    } else if (form.catMode === 'new') {
+      payload.category_name = form.category_name.trim();
+    } else if (form.catMode === 'none') {
+      payload.category_id = null;
+    }
     const res = isEdit
       ? await update.mutateAsync({ id, data: payload })
       : await create.mutateAsync(payload);
@@ -101,6 +116,34 @@ export default function PromptForm({ id }) {
         <div>
           <Label>用途（简述）</Label>
           <Input value={form.purpose} onChange={set('purpose')} placeholder="如：让 AI 审查一段代码的质量" />
+        </div>
+
+        {/* 分类选择 */}
+        <div>
+          <Label>分类</Label>
+          <div className="flex gap-2">
+            <Select value={form.catMode} onChange={set('catMode')} className="w-32 shrink-0">
+              <option value="existing">已有分类</option>
+              <option value="new">新建分类</option>
+              <option value="none">不归类</option>
+            </Select>
+            {form.catMode === 'existing' ? (
+              <Select value={form.category_id} onChange={set('category_id')}>
+                <option value="">（不归类）</option>
+                {categories?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+            ) : form.catMode === 'new' ? (
+              <Input
+                value={form.category_name}
+                onChange={set('category_name')}
+                placeholder="新分类名，如：代码审查"
+              />
+            ) : (
+              <Input disabled placeholder="该提示词不归入任何分类" />
+            )}
+          </div>
         </div>
 
         <div>

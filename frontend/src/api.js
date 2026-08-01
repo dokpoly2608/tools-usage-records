@@ -55,6 +55,11 @@ export const api = {
   deletePrompt: (id) => req(`/prompts/${id}`, { method: 'DELETE' }),
   recordPromptUse: (id, note) => req(`/prompts/${id}/use`, { method: 'POST', body: { note: note || '' } }),
   promptHistory: (id) => req(`/prompts/${id}/history`),
+  // categories
+  categories: () => req('/categories'),
+  createCategory: (d) => req('/categories', { method: 'POST', body: d }),
+  updateCategory: (id, d) => req(`/categories/${id}`, { method: 'PUT', body: d }),
+  deleteCategory: (id) => req(`/categories/${id}`, { method: 'DELETE' }),
   // stats
   statsOverview: () => req('/stats'),
   statsTop: (limit) => req('/stats/top' + qs({ limit })),
@@ -92,11 +97,15 @@ export function useHistory(id) {
   });
 }
 
-export function usePrompts({ source, q } = {}) {
+export function usePrompts({ category, source, q } = {}) {
   return useQuery({
-    queryKey: ['prompts', { source: source ?? null, q: q ?? '' }],
-    queryFn: () => api.prompts({ source, q }),
+    queryKey: ['prompts', { category: category ?? null, source: source ?? null, q: q ?? '' }],
+    queryFn: () => api.prompts({ category, source, q }),
   });
+}
+
+export function useCategories() {
+  return useQuery({ queryKey: ['categories'], queryFn: api.categories });
 }
 
 export function usePrompt(id) {
@@ -141,6 +150,7 @@ function useInvalidate() {
     qc.invalidateQueries({ queryKey: ['entries'] });
     qc.invalidateQueries({ queryKey: ['tools'] });
     qc.invalidateQueries({ queryKey: ['prompts'] });
+    qc.invalidateQueries({ queryKey: ['categories'] });
     qc.invalidateQueries({ queryKey: ['stats'] });
   };
 }
@@ -189,6 +199,27 @@ export function useCreateTool() {
     mutationFn: api.createTool,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tools'] }),
   });
+}
+
+export function useCreateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createCategory,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+}
+
+export function useUpdateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => api.updateCategory(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+}
+
+export function useDeleteCategory() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: api.deleteCategory, onSuccess: invalidate });
 }
 
 export function useCreatePrompt() {
