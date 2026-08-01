@@ -30,6 +30,8 @@
 │   │   └── routes/
 │   │       ├── tools.js      # /api/tools
 │   │       ├── entries.js    # /api/entries（搜索/CRUD/记录使用）
+│   │       ├── prompts.js    # /api/prompts（搜索/CRUD/记录使用/按分类筛选）
+│   │       ├── categories.js # /api/categories（提示词分类）
 │   │       └── stats.js      # /api/stats
 │   └── data/kb.sqlite        # 运行后生成
 └── frontend/
@@ -65,16 +67,22 @@ npm run dev
 - **tools**：工具（git / jq / claude / docker …）。`name` 唯一。
 - **entries**：命令用法条目。归属某个 tool，包含 `title`、`command`（命令原文，可含 `{{变量}}`）、`purpose`、`content`、`tags`、`variables`（模板变量元数据）、`usage_count`。
 - **usage_logs**：每次「记录使用」的明细（时间 + 备注），用于历史时间线。
-- **prompts**：AI 提示词条目（独立表）。包含 `title`、`content`（提示词原文，可含 `{{变量}}`）、`purpose`、`tags`、`variables`、`source`（manual / claude-code / codex）、`usage_count`。
+- **prompt_categories**：提示词分类（按用途/场景，如「代码审查与优化」「调研与分析」）。`name` 唯一。
+- **prompts**：AI 提示词条目（独立表）。包含 `title`、`content`（提示词原文，可含 `{{变量}}`）、`purpose`、`tags`、`variables`、`source`（manual / claude-code / codex）、`category_id`（归属分类，可空）、`usage_count`。
 - **prompt_usage_logs**：提示词使用明细。
 
 ## 核心功能
 
+- **两套分开 + 切换**：侧边栏顶部「命令 / 提示词」切换，命令模式列工具、提示词模式列分类，两套互不干扰。
+- **提示词分类**：按用途/场景分类拆分（独立 `prompt_categories` 表），侧边栏可点分类筛选、内联新建分类；建/编辑提示词时选分类。
+- **URL 状态化**：搜索词、命令/提示词切换、工具/分类筛选都体现在 URL hash，方便复制链接直达与浏览器后退：
+  - `#/?q=git` 命令搜索 / `#/tool/:id` 按工具
+  - `#/prompts` 全部提示词 / `#/prompts?cat=:id` 按分类（`cat=0` 未分类）/ `#/prompts?q=review` 搜索
 - **搜索匹配**：标题 / 命令 / 用途 / 内容 / 标签 多字段 LIKE；排序 = 匹配位置权重（标题 100 > 命令 50 > 用途 20）+ `usage_count`，**高频优先**。提示词同理（标题 100 > 内容 50 > 用途 20）。
 - **使用频次**：每条命令/提示词记 `usage_count`，按工具聚合；详情页可「记录本次使用」，统计页有高频榜 / 按工具汇总 / 最近使用。
 - **套模板**：命令和提示词都支持 `{{变量}}` 占位；详情页点「套模板」填入变量值，实时预览并一键复制渲染结果。
 - **Markdown 编辑**：新建/编辑带实时预览；详情页渲染，代码块悬浮显示复制按钮，命令一键复制。
-- **新建工具**：建条目时选「新建工具」可直接建出 tool，无需先建工具。
+- **新建工具/分类**：建条目时选「新建工具/分类」可直接建出，无需先建。
 
 ## API 一览
 

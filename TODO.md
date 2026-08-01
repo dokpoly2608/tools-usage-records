@@ -17,6 +17,12 @@
   - 完整设计见 [docs/auto-record-design.md](./docs/auto-record-design.md)。
   - 思路：zsh `zshaddhistory` + claude/codex `UserPromptSubmit` hook → 追加 `backend/data/raw_*.jsonl`；`scripts/auto_ingest.mjs` 增量读取 → AI 聚类提炼 → 复用 `import.mjs` 幂等入库。
   - 参考 `agentmemory` 插件 hook 模式。当前**仅设计**，未启用。
+  - 已具备的采集管道（手动）：`npm run collect:sessions`（按会话存档到 `.tmp/collect/sessions/`，含会话id/时间/采集时间/原始提示词json）→ `npm run curate`（筛选模板到 `docs/curated_templates.json`）→ 人工归纳 → `npm run import:categories`（建分类+归类导入）。`auto_ingest.mjs` 待在此基础上做成增量自动化。
+
+## P2 —— 提示词分类增强
+
+- [ ] **分类管理页**：当前分类只能侧边栏内联新建、详情/表单里归类；缺独立的分类管理页（重命名、合并、拆分、删除、改描述、批量移动提示词）。
+- [ ] **分类排序/拖拽**：侧边栏分类按名字排序，后续可支持手动排序或按使用频次。
 
 ## P2 —— 增强项（当前用简单方案实现，后续可替换）
 
