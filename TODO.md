@@ -13,6 +13,11 @@
     - `ckb top` 看高频
   - 直接读 `backend/data/kb.sqlite` 或走 HTTP API 均可，待定。
 
+- [ ] **自动录入 / 监控**（zsh 命令 + claude/codex 提示词自动记录 + 定期 AI 入库）
+  - 完整设计见 [docs/auto-record-design.md](./docs/auto-record-design.md)。
+  - 思路：zsh `zshaddhistory` + claude/codex `UserPromptSubmit` hook → 追加 `backend/data/raw_*.jsonl`；`scripts/auto_ingest.mjs` 增量读取 → AI 聚类提炼 → 复用 `import.mjs` 幂等入库。
+  - 参考 `agentmemory` 插件 hook 模式。当前**仅设计**，未启用。
+
 ## P2 —— 增强项（当前用简单方案实现，后续可替换）
 
 - [ ] **全文检索 FTS5**

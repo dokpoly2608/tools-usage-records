@@ -9,7 +9,10 @@
     "dev": "concurrently -n backend,frontend -c blue,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build"
+    "build": "npm --prefix frontend run build",
+    "collect": "node scripts/collect.mjs",
+    "analyze": "node scripts/analyze.mjs",
+    "import": "node scripts/import.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
