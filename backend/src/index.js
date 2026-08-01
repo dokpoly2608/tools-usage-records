@@ -1,11 +1,26 @@
 import Koa from 'koa';
 import cors from '@koa/cors';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import toolsRouter from './routes/tools.js';
 import entriesRouter from './routes/entries.js';
 import promptsRouter from './routes/prompts.js';
 import categoriesRouter from './routes/categories.js';
 import statsRouter from './routes/stats.js';
 import { initSchema } from './db.js';
+
+// 轻量读取根目录 .env（无需 dotenv 依赖）。已存在的同名环境变量优先。
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envFile = path.join(__dirname, '..', '..', '.env');
+if (fs.existsSync(envFile)) {
+  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m) continue;
+    const val = m[2].replace(/^["']|["']$/g, '');
+    if (process.env[m[1]] === undefined) process.env[m[1]] = val;
+  }
+}
 
 const app = new Koa();
 
@@ -48,7 +63,7 @@ app.use(promptsRouter.routes()).use(promptsRouter.allowedMethods());
 app.use(categoriesRouter.routes()).use(categoriesRouter.allowedMethods());
 app.use(statsRouter.routes()).use(statsRouter.allowedMethods());
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.BACKEND_PORT) || 3000;
 
 initSchema()
   .then(() => {

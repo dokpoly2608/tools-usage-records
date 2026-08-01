@@ -5,3 +5,4 @@ backend/data/*.sqlite-*
 .tmp/collect/
 *.log
 .DS_Store
+.env
