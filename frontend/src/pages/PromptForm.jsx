@@ -122,7 +122,7 @@ export default function PromptForm({ id }) {
         <div>
           <Label>分类</Label>
           <div className="flex gap-2">
-            <Select value={form.catMode} onChange={set('catMode')} className="w-32 shrink-0">
+            <Select value={form.catMode} onChange={set('catMode')} className="!w-32 !shrink-0">
               <option value="existing">已有分类</option>
               <option value="new">新建分类</option>
               <option value="none">不归类</option>

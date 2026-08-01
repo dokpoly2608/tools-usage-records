@@ -113,7 +113,7 @@ export default function EntryForm({ id }) {
         <div>
           <Label>工具</Label>
           <div className="flex gap-2">
-            <Select value={form.toolMode} onChange={set('toolMode')} className="w-32 shrink-0">
+            <Select value={form.toolMode} onChange={set('toolMode')} className="!w-32 !shrink-0">
               <option value="existing">已有工具</option>
               <option value="new">新建工具</option>
             </Select>
