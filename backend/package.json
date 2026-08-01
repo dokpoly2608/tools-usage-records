@@ -1,0 +1,18 @@
+{
+  "name": "cmd-kb-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "@koa/router": "^13.1.0",
+    "better-sqlite3": "^11.8.1",
+    "koa": "^3.0.0",
+    "kysely": "^0.28.2"
+  }
+}

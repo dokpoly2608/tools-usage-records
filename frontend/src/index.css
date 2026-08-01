@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+/* ---- markdown 渲染（不依赖 @tailwindcss/typography，手写轻量 prose） ---- */
+.prose-kb {
+  color: #1e293b;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+.prose-kb h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.2rem 0 0.6rem;
+}
+.prose-kb h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1.1rem 0 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.25rem;
+}
+.prose-kb h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1rem 0 0.4rem;
+}
+.prose-kb p {
+  margin: 0.5rem 0;
+}
+.prose-kb ul,
+.prose-kb ol {
+  margin: 0.5rem 0;
+  padding-left: 1.4rem;
+}
+.prose-kb ul {
+  list-style: disc;
+}
+.prose-kb ol {
+  list-style: decimal;
+}
+.prose-kb li {
+  margin: 0.2rem 0;
+}
+.prose-kb a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+.prose-kb blockquote {
+  border-left: 3px solid #c7d2fe;
+  padding: 0.2rem 0 0.2rem 0.9rem;
+  color: #475569;
+  margin: 0.6rem 0;
+  background: #f8fafc;
+  border-radius: 0 4px 4px 0;
+}
+.prose-kb code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+.prose-kb :not(pre) > code {
+  background: #f1f5f9;
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+  color: #be185d;
+}
+.prose-kb pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.7rem 0;
+}
+.prose-kb pre code {
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+.prose-kb table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7rem 0;
+  font-size: 0.9rem;
+}
+.prose-kb th,
+.prose-kb td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.prose-kb th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+.prose-kb hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 1rem 0;
+}

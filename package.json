@@ -1,0 +1,17 @@
+{
+  "name": "cmd-usage-kb",
+  "version": "0.1.0",
+  "private": true,
+  "description": "命令用法知识库 —— 记录 / 搜索 / 统计高频命令用法，前后端分离",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "seed": "npm --prefix backend run seed",
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

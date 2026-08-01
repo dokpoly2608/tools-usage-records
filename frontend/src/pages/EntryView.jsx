@@ -1,0 +1,132 @@
+import { useState } from 'react';
+import { useNav } from '../nav.jsx';
+import {
+  useEntry,
+  useHistory,
+  useRecordUse,
+  useDeleteEntry,
+} from '../api.js';
+import { Button, Badge, Card, Spinner } from '../components/ui.jsx';
+import Markdown from '../components/Markdown.jsx';
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="subtle"
+      size="sm"
+      onClick={() => {
+        navigator.clipboard?.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      }}
+    >
+      {copied ? '已复制 ✓' : '⧉ 复制命令'}
+    </Button>
+  );
+}
+
+export default function EntryView({ id }) {
+  const { navigate } = useNav();
+  const { data: e, isLoading } = useEntry(id);
+  const { data: history } = useHistory(id);
+  const recordUse = useRecordUse();
+  const del = useDeleteEntry();
+
+  if (isLoading)
+    return (
+      <div className="py-20 text-center text-slate-400">
+        <Spinner className="h-6 w-6" />
+      </div>
+    );
+  if (!e) return <div className="py-20 text-center text-slate-400">未找到该条目</div>;
+
+  const onDelete = async () => {
+    if (!confirm(`确认删除「${e.title}」？此操作不可恢复。`)) return;
+    await del.mutateAsync(e.id);
+    navigate('#/');
+  };
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={() => navigate('#/')}
+        className="text-sm text-slate-500 hover:text-slate-700"
+      >
+        ← 返回列表
+      </button>
+
+      <div>
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <Badge className="bg-indigo-50 text-indigo-700">{e.tool_name}</Badge>
+          {e.usage_count > 0 && (
+            <Badge className="bg-amber-50 text-amber-700">⚡ 使用 {e.usage_count} 次</Badge>
+          )}
+          {e.tags?.map((t) => (
+            <Badge key={t} className="bg-slate-100 text-slate-600">
+              #{t}
+            </Badge>
+          ))}
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900">{e.title}</h1>
+        {e.purpose && <p className="mt-1 text-slate-500">{e.purpose}</p>}
+      </div>
+
+      {e.command && (
+        <Card className="p-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">命令</span>
+            <CopyButton text={e.command} />
+          </div>
+          <pre className="overflow-x-auto rounded bg-slate-900 p-3 font-mono text-sm text-slate-100">
+            <code>{e.command}</code>
+          </pre>
+        </Card>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          onClick={() => recordUse.mutate({ id: e.id })}
+          disabled={recordUse.isPending}
+        >
+          {recordUse.isPending ? '记录中…' : '⚡ 记录本次使用'}
+        </Button>
+        <Button variant="outline" onClick={() => navigate(`#/edit/${e.id}`)}>
+          ✎ 编辑
+        </Button>
+        <Button
+          variant="ghost"
+          className="text-red-600 hover:bg-red-50"
+          onClick={onDelete}
+          disabled={del.isPending}
+        >
+          删除
+        </Button>
+      </div>
+
+      {e.content && (
+        <Card className="p-5">
+          <Markdown>{e.content}</Markdown>
+        </Card>
+      )}
+
+      {history?.length > 0 && (
+        <Card className="p-4">
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            使用历史（最近 {history.length} 次）
+          </h3>
+          <ul className="space-y-1.5">
+            {history.map((h) => (
+              <li key={h.id} className="flex items-baseline gap-2 text-sm">
+                <span className="shrink-0 text-slate-400">
+                  {new Date(h.used_at).toLocaleString()}
+                </span>
+                {h.note && <span className="text-slate-600">— {h.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </div>
+  );
+}
