@@ -40,16 +40,43 @@ export async function initSchema() {
     .addColumn('purpose', 'text', (c) => c.defaultTo(''))
     .addColumn('content', 'text', (c) => c.defaultTo(''))
     .addColumn('tags', 'text', (c) => c.defaultTo('[]'))
+    .addColumn('variables', 'text', (c) => c.defaultTo('[]')) // 命令模板变量 JSON
     .addColumn('usage_count', 'integer', (c) => c.defaultTo(0).notNull())
     .addColumn('created_at', 'text', (c) => c.notNull())
     .addColumn('updated_at', 'text', (c) => c.notNull())
     .execute();
 
-  // usage_logs: 每次使用记录（历史明细）
+  // 旧库迁移：entries 增 variables 列（已存在则跳过）
+  await ensureColumn('entries', 'variables', 'text NOT NULL DEFAULT "[]"');
+
+  // usage_logs: 命令每次使用记录（历史明细）
   await db.schema.createTable('usage_logs').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
     .addColumn('entry_id', 'integer', (c) =>
       c.notNull().references('entries.id').onDelete('cascade'))
+    .addColumn('note', 'text', (c) => c.defaultTo(''))
+    .addColumn('used_at', 'text', (c) => c.notNull())
+    .execute();
+
+  // prompts: AI 提示词知识条目（独立于 entries/tools）
+  await db.schema.createTable('prompts').ifNotExists()
+    .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
+    .addColumn('title', 'text', (c) => c.notNull())
+    .addColumn('content', 'text', (c) => c.defaultTo('')) // 提示词原文，可含 {{var}}
+    .addColumn('purpose', 'text', (c) => c.defaultTo(''))
+    .addColumn('tags', 'text', (c) => c.defaultTo('[]'))
+    .addColumn('variables', 'text', (c) => c.defaultTo('[]')) // 模板变量 JSON
+    .addColumn('source', 'text', (c) => c.defaultTo('manual')) // claude-code / codex / manual
+    .addColumn('usage_count', 'integer', (c) => c.defaultTo(0).notNull())
+    .addColumn('created_at', 'text', (c) => c.notNull())
+    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .execute();
+
+  // prompt_usage_logs: 提示词每次使用记录
+  await db.schema.createTable('prompt_usage_logs').ifNotExists()
+    .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
+    .addColumn('prompt_id', 'integer', (c) =>
+      c.notNull().references('prompts.id').onDelete('cascade'))
     .addColumn('note', 'text', (c) => c.defaultTo(''))
     .addColumn('used_at', 'text', (c) => c.notNull())
     .execute();
@@ -61,6 +88,17 @@ export async function initSchema() {
     .on('entries').column('usage_count').execute();
   await db.schema.createIndex('idx_usage_entry').ifNotExists()
     .on('usage_logs').column('entry_id').execute();
+  await db.schema.createIndex('idx_prompts_usage').ifNotExists()
+    .on('prompts').column('usage_count').execute();
+  await db.schema.createIndex('idx_prompt_usage_entry').ifNotExists()
+    .on('prompt_usage_logs').column('prompt_id').execute();
+}
+
+// 安全加列：列已存在则跳过（SQLite ALTER TABLE 无 IF NOT EXISTS）
+async function ensureColumn(table, column, definition) {
+  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all();
+  if (cols.some((c) => c.name === column)) return;
+  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
 // tags 以 JSON 数组字符串存储，读取时解析
@@ -69,6 +107,20 @@ export function parseTags(raw) {
   try {
     const v = JSON.parse(raw);
     return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+// variables: [{name, desc, default}]，同样以 JSON 字符串存储
+export function parseVariables(raw) {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    if (!Array.isArray(v)) return [];
+    return v
+      .filter((x) => x && typeof x === 'object' && x.name)
+      .map((x) => ({ name: String(x.name), desc: x.desc || '', default: x.default ?? '' }));
   } catch {
     return [];
   }

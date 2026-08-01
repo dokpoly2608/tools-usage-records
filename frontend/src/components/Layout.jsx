@@ -24,8 +24,11 @@ export default function Layout({ children }) {
 
   const onSearchChange = (v) => {
     setQuery(v);
-    // 在非列表页输入时，跳回全部命令以展示搜索结果
-    if (v && view.name !== 'home' && view.name !== 'tool') navigate('#/');
+    // 在非列表页输入时，跳回对应列表以展示搜索结果
+    if (v && view.name !== 'home' && view.name !== 'tool' &&
+        view.name !== 'prompts' && view.name !== 'prompt') {
+      navigate('#/');
+    }
   };
 
   return (
@@ -45,6 +48,12 @@ export default function Layout({ children }) {
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
           <SideItem active={view.name === 'home'} onClick={() => navigate('#/')}>
             <span>🔍 全部命令</span>
+          </SideItem>
+          <SideItem
+            active={view.name === 'prompts' && !view.source}
+            onClick={() => navigate('#/prompts')}
+          >
+            <span>✍ 全部提示词</span>
           </SideItem>
           <div className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-slate-500">
             工具
@@ -73,6 +82,9 @@ export default function Layout({ children }) {
           <SideItem onClick={() => navigate('#/new')}>
             <span className="text-indigo-300">＋ 新建命令</span>
           </SideItem>
+          <SideItem onClick={() => navigate('#/prompt-new')}>
+            <span className="text-emerald-300">＋ 新建提示词</span>
+          </SideItem>
         </div>
       </aside>
 
@@ -85,7 +97,7 @@ export default function Layout({ children }) {
               ref={searchRef}
               value={query}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="搜索命令 / 用途 / 内容 / 标签…   (按 / 聚焦)"
+              placeholder="搜索命令 / 提示词 / 用途 / 标签…   (按 / 聚焦)"
               className="h-9 w-full rounded-md border border-slate-300 bg-slate-50 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             />
             {query && (

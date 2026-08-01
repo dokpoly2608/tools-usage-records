@@ -1,0 +1,158 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useNav } from '../nav.jsx';
+import { usePrompt, useCreatePrompt, useUpdatePrompt } from '../api.js';
+import { Button, Input, Textarea, Select, Label, Card, Spinner } from '../components/ui.jsx';
+import Markdown from '../components/Markdown.jsx';
+import { extractVars, renderTemplate } from '../components/TemplateModal.jsx';
+
+const EMPTY = {
+  title: '',
+  purpose: '',
+  source: 'manual',
+  tagsText: '',
+  content: '',
+  varDesc: {}, // name -> desc
+};
+
+export default function PromptForm({ id }) {
+  const isEdit = !!id;
+  const { navigate } = useNav();
+  const { data: existing, isLoading } = usePrompt(id);
+  const create = useCreatePrompt();
+  const update = useUpdatePrompt();
+
+  const [form, setForm] = useState(EMPTY);
+
+  useEffect(() => {
+    if (isEdit && existing) {
+      const varDesc = {};
+      for (const v of existing.variables || []) varDesc[v.name] = v.desc || '';
+      setForm({
+        title: existing.title || '',
+        purpose: existing.purpose || '',
+        source: existing.source || 'manual',
+        tagsText: (existing.tags || []).join(', '),
+        content: existing.content || '',
+        varDesc,
+      });
+    }
+  }, [isEdit, existing]);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setVarDesc = (name) => (e) =>
+    setForm((f) => ({ ...f, varDesc: { ...f.varDesc, [name]: e.target.value } }));
+
+  // 从 content 自动检测变量
+  const varNames = useMemo(() => extractVars(form.content), [form.content]);
+
+  const onSubmit = async (ev) => {
+    ev.preventDefault();
+    if (!form.title.trim()) return;
+    const tags = form.tagsText.split(',').map((s) => s.trim()).filter(Boolean);
+    const variables = varNames.map((name) => ({ name, desc: form.varDesc[name] || '', default: '' }));
+    const payload = {
+      title: form.title,
+      purpose: form.purpose,
+      source: form.source,
+      content: form.content,
+      tags,
+      variables,
+    };
+    const res = isEdit
+      ? await update.mutateAsync({ id, data: payload })
+      : await create.mutateAsync(payload);
+    navigate(`#/prompt/${res.id}`);
+  };
+
+  if (isEdit && isLoading)
+    return (
+      <div className="py-20 text-center text-slate-400">
+        <Spinner className="h-6 w-6" />
+      </div>
+    );
+
+  const submitting = create.isPending || update.isPending;
+  const preview = renderTemplate(form.content, Object.fromEntries(varNames.map((n) => [n, form.varDesc[n] || ''])));
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate(isEdit ? `#/prompt/${id}` : '#/prompts')} className="text-sm text-slate-500 hover:text-slate-700">
+        ← 取消
+      </button>
+
+      <h1 className="text-xl font-bold text-slate-900">{isEdit ? '编辑提示词' : '新建提示词'}</h1>
+
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label>标题 *</Label>
+            <Input value={form.title} onChange={set('title')} placeholder="如：代码审查提示词" required />
+          </div>
+          <div>
+            <Label>来源</Label>
+            <Select value={form.source} onChange={set('source')}>
+              <option value="manual">手动</option>
+              <option value="claude-code">Claude Code</option>
+              <option value="codex">Codex</option>
+            </Select>
+          </div>
+        </div>
+
+        <div>
+          <Label>用途（简述）</Label>
+          <Input value={form.purpose} onChange={set('purpose')} placeholder="如：让 AI 审查一段代码的质量" />
+        </div>
+
+        <div>
+          <Label>标签（逗号分隔）</Label>
+          <Input value={form.tagsText} onChange={set('tagsText')} placeholder="如：review, 代码质量" />
+        </div>
+
+        <div>
+          <Label>提示词原文（Markdown，支持 {'{{变量}}'} 套模板）</Label>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <Textarea
+              value={form.content}
+              onChange={set('content')}
+              rows={14}
+              placeholder={'请审查以下 {{language}} 代码：\n\n```\n{{code}}\n```\n\n关注 {{focus}} 方面。'}
+            />
+            <Card className="min-h-[14rem] overflow-auto p-4">
+              {form.content ? <Markdown>{form.content}</Markdown> : <p className="text-sm text-slate-300">实时预览…</p>}
+            </Card>
+          </div>
+        </div>
+
+        {varNames.length > 0 && (
+          <Card className="p-4">
+            <Label>检测到模板变量（可补充说明）</Label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {varNames.map((name) => (
+                <div key={name}>
+                  <span className="mb-1 block font-mono text-xs text-violet-700">{'{{' + name + '}}'}</span>
+                  <Input
+                    value={form.varDesc[name] || ''}
+                    onChange={setVarDesc(name)}
+                    placeholder={`说明 ${name} 是什么（可选）`}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              预览（变量未填值时保留标记）：{preview}
+            </p>
+          </Card>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Button type="submit" disabled={submitting}>
+            {submitting ? '保存中…' : isEdit ? '保存修改' : '创建'}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => navigate(isEdit ? `#/prompt/${id}` : '#/prompts')}>
+            取消
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

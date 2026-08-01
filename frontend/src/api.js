@@ -47,11 +47,21 @@ export const api = {
   deleteEntry: (id) => req(`/entries/${id}`, { method: 'DELETE' }),
   recordUse: (id, note) => req(`/entries/${id}/use`, { method: 'POST', body: { note: note || '' } }),
   history: (id) => req(`/entries/${id}/history`),
+  // prompts
+  prompts: (params) => req('/prompts' + qs(params)),
+  prompt: (id) => req(`/prompts/${id}`),
+  createPrompt: (d) => req('/prompts', { method: 'POST', body: d }),
+  updatePrompt: (id, d) => req(`/prompts/${id}`, { method: 'PUT', body: d }),
+  deletePrompt: (id) => req(`/prompts/${id}`, { method: 'DELETE' }),
+  recordPromptUse: (id, note) => req(`/prompts/${id}/use`, { method: 'POST', body: { note: note || '' } }),
+  promptHistory: (id) => req(`/prompts/${id}/history`),
   // stats
   statsOverview: () => req('/stats'),
   statsTop: (limit) => req('/stats/top' + qs({ limit })),
   statsRecent: (limit) => req('/stats/recent' + qs({ limit })),
   statsByTool: () => req('/stats/by-tool'),
+  statsPromptsTop: (limit) => req('/stats/prompts/top' + qs({ limit })),
+  statsPromptsRecent: (limit) => req('/stats/prompts/recent' + qs({ limit })),
 };
 
 // ---------------- queries ----------------
@@ -82,6 +92,29 @@ export function useHistory(id) {
   });
 }
 
+export function usePrompts({ source, q } = {}) {
+  return useQuery({
+    queryKey: ['prompts', { source: source ?? null, q: q ?? '' }],
+    queryFn: () => api.prompts({ source, q }),
+  });
+}
+
+export function usePrompt(id) {
+  return useQuery({
+    queryKey: ['prompt', id],
+    queryFn: () => api.prompt(id),
+    enabled: !!id,
+  });
+}
+
+export function usePromptHistory(id) {
+  return useQuery({
+    queryKey: ['prompt-history', id],
+    queryFn: () => api.promptHistory(id),
+    enabled: !!id,
+  });
+}
+
 export function useStatsOverview() {
   return useQuery({ queryKey: ['stats', 'overview'], queryFn: api.statsOverview });
 }
@@ -94,6 +127,12 @@ export function useStatsRecent(limit = 30) {
 export function useStatsByTool() {
   return useQuery({ queryKey: ['stats', 'by-tool'], queryFn: api.statsByTool });
 }
+export function useStatsPromptsTop(limit = 10) {
+  return useQuery({ queryKey: ['stats', 'prompts-top', limit], queryFn: () => api.statsPromptsTop(limit) });
+}
+export function useStatsPromptsRecent(limit = 30) {
+  return useQuery({ queryKey: ['stats', 'prompts-recent', limit], queryFn: () => api.statsPromptsRecent(limit) });
+}
 
 // ---------------- mutations ----------------
 function useInvalidate() {
@@ -101,6 +140,7 @@ function useInvalidate() {
   return () => {
     qc.invalidateQueries({ queryKey: ['entries'] });
     qc.invalidateQueries({ queryKey: ['tools'] });
+    qc.invalidateQueries({ queryKey: ['prompts'] });
     qc.invalidateQueries({ queryKey: ['stats'] });
   };
 }
@@ -148,5 +188,43 @@ export function useCreateTool() {
   return useMutation({
     mutationFn: api.createTool,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tools'] }),
+  });
+}
+
+export function useCreatePrompt() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: api.createPrompt,
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdatePrompt() {
+  const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => api.updatePrompt(id, data),
+    onSuccess: (_data, { id }) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['prompt', id] });
+    },
+  });
+}
+
+export function useDeletePrompt() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: api.deletePrompt, onSuccess: invalidate });
+}
+
+export function useRecordPromptUse() {
+  const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }) => api.recordPromptUse(id, note),
+    onSuccess: (_data, { id }) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['prompt', id] });
+      qc.invalidateQueries({ queryKey: ['prompt-history', id] });
+    },
   });
 }

@@ -1,6 +1,6 @@
 import Router from '@koa/router';
 import { sql } from 'kysely';
-import { db, nowIso, parseTags } from '../db.js';
+import { db, nowIso, parseTags, parseVariables } from '../db.js';
 
 const router = new Router({ prefix: '/api/entries' });
 
@@ -8,6 +8,7 @@ function shapeRow(r) {
   return {
     ...r,
     tags: parseTags(r.tags),
+    variables: parseVariables(r.variables),
     usage_count: Number(r.usage_count),
   };
 }
@@ -22,7 +23,8 @@ router.get('/', async (ctx) => {
     .leftJoin('tools', 'tools.id', 'entries.tool_id')
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
-      'entries.purpose', 'entries.content', 'entries.tags', 'entries.usage_count',
+      'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
+      'entries.usage_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ]);
@@ -60,7 +62,8 @@ router.get('/:id', async (ctx) => {
     .leftJoin('tools', 'tools.id', 'entries.tool_id')
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
-      'entries.purpose', 'entries.content', 'entries.tags', 'entries.usage_count',
+      'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
+      'entries.usage_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ])
@@ -73,7 +76,7 @@ router.get('/:id', async (ctx) => {
 // 创建（支持传 tool_id 或 tool_name；tool_name 不存在则自动创建）
 router.post('/', async (ctx) => {
   const b = ctx.request.body || {};
-  const { tool_id, tool_name, title, command, purpose, content, tags } = b;
+  const { tool_id, tool_name, title, command, purpose, content, tags, variables } = b;
   if (!title || !title.trim()) ctx.throw(400, 'title required');
 
   let tid = tool_id ? Number(tool_id) : null;
@@ -101,6 +104,7 @@ router.post('/', async (ctx) => {
       purpose: purpose || '',
       content: content || '',
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
+      variables: JSON.stringify(Array.isArray(variables) ? variables : []),
       usage_count: 0,
       created_at: now,
       updated_at: now,
@@ -120,6 +124,7 @@ router.put('/:id', async (ctx) => {
   if (b.purpose !== undefined) patch.purpose = b.purpose;
   if (b.content !== undefined) patch.content = b.content;
   if (b.tags !== undefined) patch.tags = JSON.stringify(Array.isArray(b.tags) ? b.tags : []);
+  if (b.variables !== undefined) patch.variables = JSON.stringify(Array.isArray(b.variables) ? b.variables : []);
   if (b.tool_id !== undefined) patch.tool_id = Number(b.tool_id);
 
   await db.updateTable('entries').set(patch).where('id', '=', id).execute();
@@ -163,7 +168,8 @@ async function getById(id) {
     .leftJoin('tools', 'tools.id', 'entries.tool_id')
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
-      'entries.purpose', 'entries.content', 'entries.tags', 'entries.usage_count',
+      'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
+      'entries.usage_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ])

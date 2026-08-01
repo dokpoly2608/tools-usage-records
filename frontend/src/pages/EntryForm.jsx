@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNav } from '../nav.jsx';
 import {
   useTools,
@@ -8,6 +8,7 @@ import {
 } from '../api.js';
 import { Button, Input, Textarea, Select, Label, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
+import { extractVars } from '../components/TemplateModal.jsx';
 
 const EMPTY = {
   toolMode: 'existing',
@@ -18,6 +19,7 @@ const EMPTY = {
   purpose: '',
   tagsText: '',
   content: '',
+  varDesc: {},
 };
 
 export default function EntryForm({ id }) {
@@ -32,6 +34,8 @@ export default function EntryForm({ id }) {
 
   useEffect(() => {
     if (isEdit && existing) {
+      const varDesc = {};
+      for (const v of existing.variables || []) varDesc[v.name] = v.desc || '';
       setForm({
         toolMode: 'existing',
         tool_id: String(existing.tool_id),
@@ -41,11 +45,17 @@ export default function EntryForm({ id }) {
         purpose: existing.purpose || '',
         tagsText: (existing.tags || []).join(', '),
         content: existing.content || '',
+        varDesc,
       });
     }
   }, [isEdit, existing]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setVarDesc = (name) => (e) =>
+    setForm((f) => ({ ...f, varDesc: { ...f.varDesc, [name]: e.target.value } }));
+
+  // 从 command 自动检测模板变量
+  const varNames = useMemo(() => extractVars(form.command), [form.command]);
 
   const onSubmit = async (ev) => {
     ev.preventDefault();
@@ -54,12 +64,14 @@ export default function EntryForm({ id }) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+    const variables = varNames.map((name) => ({ name, desc: form.varDesc[name] || '', default: '' }));
     const payload = {
       title: form.title,
       command: form.command,
       purpose: form.purpose,
       content: form.content,
       tags,
+      variables,
     };
     if (form.toolMode === 'existing') {
       if (!form.tool_id) return;
@@ -146,14 +158,32 @@ export default function EntryForm({ id }) {
         </div>
 
         <div>
-          <Label>命令</Label>
+          <Label>命令（支持 {'{{变量}}'} 套模板，如 git push origin :{'{{branch}}'}）</Label>
           <Input
             value={form.command}
             onChange={set('command')}
-            placeholder="如：git push origin --delete <branch>"
+            placeholder="如：git push origin --delete {{branch}}"
             className="font-mono"
           />
         </div>
+
+        {varNames.length > 0 && (
+          <Card className="p-4">
+            <Label>检测到模板变量（可补充说明）</Label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {varNames.map((name) => (
+                <div key={name}>
+                  <span className="mb-1 block font-mono text-xs text-violet-700">{'{{' + name + '}}'}</span>
+                  <Input
+                    value={form.varDesc[name] || ''}
+                    onChange={setVarDesc(name)}
+                    placeholder={`说明 ${name} 是什么（可选）`}
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <div>
           <Label>标签（逗号分隔）</Label>

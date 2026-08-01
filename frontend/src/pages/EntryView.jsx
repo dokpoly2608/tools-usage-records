@@ -8,6 +8,7 @@ import {
 } from '../api.js';
 import { Button, Badge, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
+import TemplateModal from '../components/TemplateModal.jsx';
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -32,6 +33,7 @@ export default function EntryView({ id }) {
   const { data: history } = useHistory(id);
   const recordUse = useRecordUse();
   const del = useDeleteEntry();
+  const [tplOpen, setTplOpen] = useState(false);
 
   if (isLoading)
     return (
@@ -76,7 +78,10 @@ export default function EntryView({ id }) {
         <Card className="p-3">
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">命令</span>
-            <CopyButton text={e.command} />
+            <div className="flex gap-1.5">
+              <Button variant="subtle" size="sm" onClick={() => setTplOpen(true)}>⌗ 套模板</Button>
+              <CopyButton text={e.command} />
+            </div>
           </div>
           <pre className="overflow-x-auto rounded bg-slate-900 p-3 font-mono text-sm text-slate-100">
             <code>{e.command}</code>
@@ -127,6 +132,14 @@ export default function EntryView({ id }) {
           </ul>
         </Card>
       )}
+
+      <TemplateModal
+        open={tplOpen}
+        onClose={() => setTplOpen(false)}
+        text={e.command}
+        variables={e.variables}
+        label="命令"
+      />
     </div>
   );
 }

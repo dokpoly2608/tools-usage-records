@@ -4,6 +4,9 @@ import Layout from './components/Layout.jsx';
 import HomePage from './pages/HomePage.jsx';
 import EntryView from './pages/EntryView.jsx';
 import EntryForm from './pages/EntryForm.jsx';
+import PromptsPage from './pages/PromptsPage.jsx';
+import PromptView from './pages/PromptView.jsx';
+import PromptForm from './pages/PromptForm.jsx';
 import StatsPage from './pages/StatsPage.jsx';
 
 function parseRoute(route) {
@@ -14,6 +17,11 @@ function parseRoute(route) {
   if (parts[0] === 'tool' && parts[1]) return { name: 'tool', id: Number(parts[1]) };
   if (parts[0] === 'entry' && parts[1]) return { name: 'entry', id: Number(parts[1]) };
   if (parts[0] === 'edit' && parts[1]) return { name: 'edit', id: Number(parts[1]) };
+  // 提示词
+  if (parts[0] === 'prompts') return { name: 'prompts', source: parts[1] || null };
+  if (parts[0] === 'prompt-new') return { name: 'prompt-new' };
+  if (parts[0] === 'prompt-edit' && parts[1]) return { name: 'prompt-edit', id: Number(parts[1]) };
+  if (parts[0] === 'prompt' && parts[1]) return { name: 'prompt', id: Number(parts[1]) };
   return { name: 'home' };
 }
 
@@ -49,6 +57,10 @@ export default function App() {
         {view.name === 'entry' && <EntryView key={`e-${view.id}`} id={view.id} />}
         {view.name === 'new' && <EntryForm key="new" />}
         {view.name === 'edit' && <EntryForm key={`edit-${view.id}`} id={view.id} />}
+        {view.name === 'prompts' && <PromptsPage key={`prompts-${view.source || 'all'}`} source={view.source} />}
+        {view.name === 'prompt' && <PromptView key={`p-${view.id}`} id={view.id} />}
+        {view.name === 'prompt-new' && <PromptForm key="prompt-new" />}
+        {view.name === 'prompt-edit' && <PromptForm key={`pedit-${view.id}`} id={view.id} />}
         {view.name === 'stats' && <StatsPage key="stats" />}
       </Layout>
     </NavContext.Provider>

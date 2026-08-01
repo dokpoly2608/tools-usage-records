@@ -11,11 +11,16 @@ router.get('/', async (ctx) => {
   const tools = await db.selectFrom('tools')
     .select([(eb) => eb.fn.count('id').as('count')])
     .executeTakeFirst();
+  const prompts = await db.selectFrom('prompts')
+    .select([(eb) => eb.fn.count('id').as('count'), (eb) => eb.fn.sum('usage_count').as('usage')])
+    .executeTakeFirst();
 
   ctx.body = {
     entries: Number(entries?.count || 0),
     tools: Number(tools?.count || 0),
     usage: Number(entries?.usage || 0),
+    prompts: Number(prompts?.count || 0),
+    prompt_usage: Number(prompts?.usage || 0),
   };
 });
 
@@ -66,6 +71,34 @@ router.get('/by-tool', async (ctx) => {
     .orderBy('usage', 'desc')
     .execute();
   ctx.body = rows.map((r) => ({ ...r, entries: Number(r.entries), usage: Number(r.usage) }));
+});
+
+// 高频提示词 Top N
+router.get('/prompts/top', async (ctx) => {
+  const limit = Math.min(Number(ctx.query.limit) || 15, 100);
+  const rows = await db.selectFrom('prompts')
+    .select(['id', 'title', 'purpose', 'source', 'usage_count'])
+    .where('usage_count', '>', 0)
+    .orderBy('usage_count', 'desc')
+    .orderBy('updated_at', 'desc')
+    .limit(limit)
+    .execute();
+  ctx.body = rows.map((r) => ({ ...r, usage_count: Number(r.usage_count) }));
+});
+
+// 提示词最近使用记录
+router.get('/prompts/recent', async (ctx) => {
+  const limit = Math.min(Number(ctx.query.limit) || 30, 100);
+  const rows = await db.selectFrom('prompt_usage_logs')
+    .innerJoin('prompts', 'prompts.id', 'prompt_usage_logs.prompt_id')
+    .select([
+      'prompt_usage_logs.id', 'prompt_usage_logs.note', 'prompt_usage_logs.used_at',
+      'prompts.id as prompt_id', 'prompts.title',
+    ])
+    .orderBy('prompt_usage_logs.used_at', 'desc')
+    .limit(limit)
+    .execute();
+  ctx.body = rows;
 });
 
 export default router;

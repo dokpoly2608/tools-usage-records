@@ -3,6 +3,7 @@ import {
   useStatsTop,
   useStatsByTool,
   useStatsRecent,
+  useStatsPromptsTop,
 } from '../api.js';
 import { useNav } from '../nav.jsx';
 import { Card, Badge, Spinner } from '../components/ui.jsx';
@@ -25,6 +26,7 @@ export default function StatsPage() {
   const top = useStatsTop(15);
   const byTool = useStatsByTool();
   const recent = useStatsRecent(20);
+  const promptsTop = useStatsPromptsTop(10);
 
   if (overview.isLoading)
     return (
@@ -33,17 +35,18 @@ export default function StatsPage() {
       </div>
     );
 
-  const o = overview.data || { entries: 0, tools: 0, usage: 0 };
+  const o = overview.data || { entries: 0, tools: 0, usage: 0, prompts: 0, prompt_usage: 0 };
   const maxUsage = Math.max(1, ...(top.data || []).map((x) => x.usage_count));
 
   return (
     <div className="space-y-5">
       <h1 className="text-lg font-semibold text-slate-800">使用统计</h1>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="命令条目" value={o.entries} />
+        <StatCard label="提示词" value={o.prompts} />
         <StatCard label="工具数" value={o.tools} />
-        <StatCard label="累计使用" value={o.usage} hint="次记录" />
+        <StatCard label="累计使用" value={o.usage + (o.prompt_usage || 0)} hint="命令 + 提示词" />
       </div>
 
       <Card className="p-4">
@@ -83,6 +86,30 @@ export default function StatsPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">🔥 高频提示词</h2>
+          {!promptsTop.data?.length ? (
+            <p className="text-sm text-slate-400">暂无使用记录。</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {promptsTop.data.map((p) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => navigate(`#/prompt/${p.id}`)}
+                    className="flex w-full items-center justify-between gap-2 text-left"
+                  >
+                    <span className="min-w-0 truncate text-slate-700">
+                      <Badge className="mr-1.5 bg-emerald-50 text-emerald-700">{p.source}</Badge>
+                      {p.title}
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-amber-600">⚡ {p.usage_count}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         <Card className="p-4">
           <h2 className="mb-3 text-sm font-semibold text-slate-700">按工具汇总</h2>
           {!byTool.data?.length ? (
