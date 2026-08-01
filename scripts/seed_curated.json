@@ -1,0 +1,40 @@
+{
+  "_comment": "候选清单导入数据。import.mjs 按 (tool,title) / (title) 幂等导入：存在则更新，不存在则创建。",
+  "commands": [
+    { "tool": "git", "title": "推送当前分支并设上游", "command": "git push -u origin $(git branch --show-current)", "purpose": "推送当前分支到远程并建立追踪关系", "tags": ["push", "upstream"], "variables": [], "content": "" },
+    { "tool": "git", "title": "删除远程分支", "command": "git push origin --delete {{branch}}", "purpose": "删除远程仓库上的分支", "tags": ["branch", "remote", "删除"], "variables": [{ "name": "branch", "desc": "要删除的远程分支名", "default": "" }], "content": "```bash\ngit push origin --delete {{branch}}\n# 等价旧写法\ngit push origin :{{branch}}\n```\n\n删除后队友需 `git fetch --prune` 清理本地残留引用。" },
+    { "tool": "git", "title": "快速提交全部改动（git ci 别名）", "command": "git ci -m \"{{msg}}\" -a", "purpose": "用自定义 ci 别名暂存并提交全部改动", "tags": ["commit", "alias"], "variables": [{ "name": "msg", "desc": "提交信息", "default": "" }], "content": "`git ci` 是自定义 alias（`git config alias.ci`），等价 `git commit`。`-a` 自动暂存已跟踪文件的改动。" },
+    { "tool": "git", "title": "图形化提交历史", "command": "git log --oneline --graph", "purpose": "单行+图形展示提交历史", "tags": ["log", "history"], "variables": [], "content": "常用组合：`git log --oneline --graph --all -20`" },
+    { "tool": "git", "title": "切回上一个分支", "command": "git switch -", "purpose": "切换到上一次所在的分支", "tags": ["branch", "switch"], "variables": [], "content": "" },
+    { "tool": "git", "title": "查看所有分支", "command": "git branch -a", "purpose": "列出本地+远程全部分支", "tags": ["branch"], "variables": [], "content": "" },
+    { "tool": "git", "title": "查看远程地址", "command": "git remote -v", "purpose": "查看仓库远程地址", "tags": ["remote"], "variables": [], "content": "" },
+    { "tool": "git", "title": "丢弃工作区改动", "command": "git restore .", "purpose": "还原当前目录所有未提交改动（不可恢复）", "tags": ["restore", "危险"], "variables": [], "content": "⚠️ 会丢弃未提交改动。仅还原已跟踪文件，新文件不受影响。" },
+    { "tool": "git", "title": "初始化仓库", "command": "git init", "purpose": "在当前目录初始化 git 仓库", "tags": ["init"], "variables": [], "content": "" },
+
+    { "tool": "claude", "title": "跳过权限启动 claude", "command": "claude --allow-dangerously-skip-permissions --dangerously-skip-permissions", "purpose": "免确认启动 claude code（最高频）", "tags": ["claude", "启动"], "variables": [], "content": "两个 flag 通常一起用才能真正跳过所有权限确认。" },
+    { "tool": "claude", "title": "用指定配置启动 claude", "command": "claude --settings {{path}} --allow-dangerously-skip-permissions --dangerously-skip-permissions", "purpose": "用自定义 settings.json 启动（切换模型/网关）", "tags": ["claude", "配置"], "variables": [{ "name": "path", "desc": "settings.json 路径", "default": "" }], "content": "通过不同 settings.json 切换模型供应商/网关，如 `~/.claude/settings_jw_glm.json`。" },
+    { "tool": "claude", "title": "恢复 claude 会话", "command": "claude --resume {{session}}", "purpose": "恢复指定 session id 的历史会话", "tags": ["claude", "resume"], "variables": [{ "name": "session", "desc": "会话 id", "default": "" }], "content": "session id 可在 `~/.claude/projects/*/*.jsonl` 文件名或内容中找到。" },
+
+    { "tool": "codex", "title": "免审批启动 codex", "command": "codex --dangerously-bypass-approvals-and-sandbox", "purpose": "跳过审批与沙箱启动 codex（最高频）", "tags": ["codex", "启动"], "variables": [], "content": "" },
+    { "tool": "codex", "title": "恢复 codex 会话", "command": "codex resume {{session}}", "purpose": "恢复指定 session 的 codex 会话", "tags": ["codex", "resume"], "variables": [{ "name": "session", "desc": "会话 id", "default": "" }], "content": "" },
+    { "tool": "codex", "title": "用指定 profile 启动 codex", "command": "codex -p {{profile}}", "purpose": "用指定配置 profile 启动 codex", "tags": ["codex", "配置"], "variables": [{ "name": "profile", "desc": "profile 名或 toml 路径", "default": "" }], "content": "" },
+
+    { "tool": "tmux", "title": "新建/接入命名会话", "command": "tmux new -t \"{{name}}\"", "purpose": "新建或接入一个命名 tmux 会话", "tags": ["tmux"], "variables": [{ "name": "name", "desc": "会话名", "default": "" }], "content": "会话已存在时 `new -t` 会接入；新建建议用 `tmux new -s {{name}}`。" },
+    { "tool": "tmux", "title": "列出 tmux 会话", "command": "tmux ls", "purpose": "查看当前所有 tmux 会话", "tags": ["tmux"], "variables": [], "content": "" },
+    { "tool": "python", "title": "起静态文件服务器", "command": "python3 -m http.server", "purpose": "在当前目录起 HTTP 静态服务（默认 8000）", "tags": ["python", "server"], "variables": [], "content": "指定端口：`python3 -m http.server {{port}}`。" },
+    { "tool": "portpeek", "title": "查端口占用", "command": "portpeek -p {{range}} -t node", "purpose": "查指定端口段被哪些 node 进程占用", "tags": ["端口", "调试"], "variables": [{ "name": "range", "desc": "端口段，如 3000-3200", "default": "" }], "content": "`-t` 按进程类型过滤（node/python/...）。" },
+    { "tool": "claude", "title": "复制文件作为 CLAUDE.md", "command": "cp {{path}} CLAUDE.md", "purpose": "把模板文件复制为当前项目 CLAUDE.md", "tags": ["claude", "模板"], "variables": [{ "name": "path", "desc": "模板文件路径", "default": "" }], "content": "常用模板放在 `~/tmp/prompts/claude/` 下。" },
+    { "tool": "uv", "title": "uv 安装本地工具", "command": "uv tool install --force {{path}}", "purpose": "用 uv 全局安装/覆盖本地 python 工具", "tags": ["uv", "python"], "variables": [{ "name": "path", "desc": "工具目录", "default": "" }], "content": "`--force` 覆盖已安装版本。" },
+    { "tool": "uv", "title": "uv 运行脚本（多 worker）", "command": "uv run python {{script}} --workers {{n}} {{path}}", "purpose": "用 uv 运行 python 脚本并指定 worker 数", "tags": ["uv", "python"], "variables": [{ "name": "script", "desc": "脚本文件", "default": "" }, { "name": "n", "desc": "worker 数", "default": "" }, { "name": "path", "desc": "输入路径", "default": "" }], "content": "" }
+  ],
+  "prompts": [
+    { "title": "提交代码（参考规范）", "content": "提交 git 保存代码。commit message 参考仓库里已有的提交信息规范，先看近期提交再写。", "purpose": "让 AI 提交当前改动并遵守已有 commit 规范", "source": "claude-code", "tags": ["提交", "git"], "variables": [] },
+    { "title": "继续上次工作", "content": "Continue from where you left off.", "purpose": "恢复上下文继续未完成的工作", "source": "claude-code", "tags": ["继续"], "variables": [] },
+    { "title": "切换 worktree 继续", "content": "切换到刚才的 worktree 然后继续工作！", "purpose": "切回之前的工作树继续任务", "source": "claude-code", "tags": ["worktree", "继续"], "variables": [] },
+    { "title": "只读调研（不改代码）", "content": "不要改代码，只调研为什么 {{question}}。给出原因分析和结论，不要直接动手改。", "purpose": "约束 AI 仅调研不改代码", "source": "claude-code", "tags": ["调研", "只读"], "variables": [{ "name": "question", "desc": "要调研的问题", "default": "" }] },
+    { "title": "输出为排序表格", "content": "按从高到低分成 {{n}} 个表格列出 {{topic}}。", "purpose": "约定输出格式为多个降序表格", "source": "claude-code", "tags": ["输出格式"], "variables": [{ "name": "n", "desc": "表数", "default": "" }, { "name": "topic", "desc": "主题", "default": "" }] },
+    { "title": "分析下一个条目", "content": "ok 分析下一个 {{item}}。", "purpose": "推进到下一个分析对象（字段/用例等）", "source": "codex", "tags": ["分析"], "variables": [{ "name": "item", "desc": "分析对象", "default": "" }] },
+    { "title": "代码审查", "content": "请审查以下 {{language}} 代码，重点关注 {{focus}}：\n\n```\n{{code}}\n```\n\n给出问题清单与改进建议。", "purpose": "通用代码审查模板", "source": "manual", "tags": ["review", "代码质量"], "variables": [{ "name": "language", "desc": "语言", "default": "" }, { "name": "focus", "desc": "关注点", "default": "" }, { "name": "code", "desc": "代码", "default": "" }] },
+    { "title": "只分析不修改某目录", "content": "只分析不修改，目录：{{path}}。读完代码后说明现状与问题，不要做任何写入。", "purpose": "强制只读分析指定目录", "source": "codex", "tags": ["只读", "分析"], "variables": [{ "name": "path", "desc": "目录路径", "default": "" }] }
+  ]
+}
