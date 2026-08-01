@@ -13,7 +13,9 @@
     "collect": "node scripts/collect.mjs",
     "collect:sessions": "node scripts/collect-sessions.mjs",
     "analyze": "node scripts/analyze.mjs",
-    "import": "node scripts/import.mjs"
+    "curate": "node scripts/curate.mjs",
+    "import": "node scripts/import.mjs",
+    "import:categories": "node scripts/import-categories.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

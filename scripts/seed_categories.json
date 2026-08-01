@@ -1,0 +1,42 @@
+{
+  "_comment": "基于 docs/curated_templates.json(55高频+60意图) 归纳的用途分类 + 提示词模板归类。import.mjs 按 name 幂等建分类、按 title 匹配提示词(已有则更新category,否则新建)。",
+  "categories": [
+    { "name": "提交与版本控制", "description": "git 提交、保存代码、初始化仓库、查提交历史等与版本控制相关的提示词" },
+    { "name": "任务推进与继续", "description": "继续上次工作、切换上下文、推进下一个条目、恢复中断的任务" },
+    { "name": "代码审查与优化", "description": "审查代码质量/bug、优化脚本效率与可读性、重构" },
+    { "name": "调研与分析", "description": "只读调研、根因分析、技术选型、方案对比" },
+    { "name": "输出格式约定", "description": "约定 AI 输出为表格/排序/特定结构" },
+    { "name": "环境与配置", "description": "安装工具、配置环境、statusline、ssh key、查找服务/配置" },
+    { "name": "数据查询与统计", "description": "SQL 查询、数据统计、分布对比、按维度聚合" }
+  ],
+  "prompts": [
+    { "_existing": true, "title": "提交代码（参考规范）", "category_name": "提交与版本控制" },
+    { "_existing": true, "title": "继续上次工作", "category_name": "任务推进与继续" },
+    { "_existing": true, "title": "切换 worktree 继续", "category_name": "任务推进与继续" },
+    { "_existing": true, "title": "只读调研（不改代码）", "category_name": "调研与分析" },
+    { "_existing": true, "title": "输出为排序表格", "category_name": "输出格式约定" },
+    { "_existing": true, "title": "分析下一个条目", "category_name": "任务推进与继续" },
+    { "_existing": true, "title": "代码审查", "category_name": "代码审查与优化" },
+    { "_existing": true, "title": "只分析不修改某目录", "category_name": "调研与分析" },
+
+    { "title": "提交 git 并保存代码", "content": "提交 git 保存代码。如果有未提交的改动先提交，commit message 简洁达意。", "purpose": "快速提交当前改动", "source": "claude-code", "category_name": "提交与版本控制", "tags": ["提交", "git"], "variables": [] },
+    { "title": "初始化 git 并提交", "content": "初始化 git 仓库并提交当前所有文件。", "purpose": "新项目首次 git init + 首次提交", "source": "claude-code", "category_name": "提交与版本控制", "tags": ["init", "git"], "variables": [] },
+    { "title": "查看提交来源与变更总结", "content": "帮我看下它们主要从 {{branch}} 分支的哪次提交（时间+哈希）开始修改了什么，总结一下。", "purpose": "定位变更起点并总结改动", "source": "claude-code", "category_name": "提交与版本控制", "tags": ["git", "总结"], "variables": [{ "name": "branch", "desc": "分支名", "default": "master" }] },
+
+    { "title": "先确认方案再执行", "content": "我们先讨论确认 {{plan}}，ok 了再实际执行，不要直接动手。", "purpose": "先对齐方案/SQL 再执行，避免浪费", "source": "claude-code", "category_name": "任务推进与继续", "tags": ["确认", "对齐"], "variables": [{ "name": "plan", "desc": "要确认的方案，如 SQL/步骤", "default": "" }] },
+
+    { "title": "审查脚本并修复 bug", "content": "帮我看下 {{path}} 有什么 bug，直接帮我修复。", "purpose": "检查脚本 bug 并直接修复", "source": "codex", "category_name": "代码审查与优化", "tags": ["bug", "修复"], "variables": [{ "name": "path", "desc": "脚本路径", "default": "" }] },
+    { "title": "从效率与可读性优化脚本", "content": "帮我看下 {{path}}，从执行效率和可读性上综合优化。", "purpose": "综合优化脚本效率与可读性", "source": "codex", "category_name": "代码审查与优化", "tags": ["优化", "效率"], "variables": [{ "name": "path", "desc": "脚本路径", "default": "" }] },
+    { "title": "分析慢查询并看 EXPLAIN", "content": "分析下为什么 {{sql}} 跑得慢，可以看下 EXPLAIN，给出优化建议。", "purpose": "排查慢 SQL 并给优化建议", "source": "claude-code", "category_name": "代码审查与优化", "tags": ["SQL", "性能"], "variables": [{ "name": "sql", "desc": "SQL 或其描述", "default": "" }] },
+
+    { "title": "调研技术选型", "content": "调研一下 {{topic}} 用什么库/方案比较合适，简化代码、提高可读性、接入成本低。给出对比和推荐。", "purpose": "技术选型调研与对比", "source": "claude-code", "category_name": "调研与分析", "tags": ["选型", "调研"], "variables": [{ "name": "topic", "desc": "要选型的领域", "default": "" }] },
+    { "title": "查找代码含义/定义", "content": "帮我从代码库里查一下 {{symbol}} 是什么意思、定义在哪里。", "purpose": "在代码库中查符号含义与定义", "source": "codex", "category_name": "调研与分析", "tags": ["代码", "查找"], "variables": [{ "name": "symbol", "desc": "符号/变量名", "default": "" }] },
+
+    { "title": "按维度统计与占比", "content": "按 {{dim}} 看数量、占比，还需要一个总的占比。", "purpose": "按维度统计数量与占比", "source": "claude-code", "category_name": "数据查询与统计", "tags": ["统计", "占比"], "variables": [{ "name": "dim", "desc": "维度，如天/月", "default": "" }] },
+    { "title": "查询某字段取值分布", "content": "帮我看一下 {{field}} 有哪些可能的取值，分布对比如何。", "purpose": "查字段取值与分布对比", "source": "codex", "category_name": "数据查询与统计", "tags": ["分布", "字段"], "variables": [{ "name": "field", "desc": "字段名", "default": "" }] },
+
+    { "title": "安装工具/依赖", "content": "帮我安装 {{tool}}，并配置好可用。", "purpose": "安装指定工具并配置", "source": "codex", "category_name": "环境与配置", "tags": ["安装"], "variables": [{ "name": "tool", "desc": "工具名", "default": "" }] },
+    { "title": "查找本机配置文件", "content": "帮我找一下本机上的 {{name}} 配置，我要修改一下。", "purpose": "定位本机配置文件位置", "source": "claude-code", "category_name": "环境与配置", "tags": ["配置", "查找"], "variables": [{ "name": "name", "desc": "配置名，如 frpc", "default": "" }] },
+    { "title": "查看某字段采集逻辑", "content": "帮我看一下 {{field}} 字段的采集逻辑。", "purpose": "定位某字段的采集实现", "source": "codex", "category_name": "调研与分析", "tags": ["字段", "采集"], "variables": [{ "name": "field", "desc": "字段名", "default": "" }] }
+  ]
+}
