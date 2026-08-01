@@ -58,6 +58,15 @@ export async function initSchema() {
     .addColumn('used_at', 'text', (c) => c.notNull())
     .execute();
 
+  // prompt_categories: 提示词分类（按用途/场景，独立表）—— 先于 prompts 建立以供外键引用
+  await db.schema.createTable('prompt_categories').ifNotExists()
+    .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
+    .addColumn('name', 'text', (c) => c.notNull().unique())
+    .addColumn('description', 'text', (c) => c.defaultTo(''))
+    .addColumn('created_at', 'text', (c) => c.notNull())
+    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .execute();
+
   // prompts: AI 提示词知识条目（独立于 entries/tools）
   await db.schema.createTable('prompts').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
@@ -67,10 +76,15 @@ export async function initSchema() {
     .addColumn('tags', 'text', (c) => c.defaultTo('[]'))
     .addColumn('variables', 'text', (c) => c.defaultTo('[]')) // 模板变量 JSON
     .addColumn('source', 'text', (c) => c.defaultTo('manual')) // claude-code / codex / manual
+    .addColumn('category_id', 'integer', (c) => // 可空，归类用
+      c.references('prompt_categories.id').onDelete('set null'))
     .addColumn('usage_count', 'integer', (c) => c.defaultTo(0).notNull())
     .addColumn('created_at', 'text', (c) => c.notNull())
     .addColumn('updated_at', 'text', (c) => c.notNull())
     .execute();
+
+  // 旧库迁移：prompts 增 category_id 列（已存在则跳过）
+  await ensureColumn('prompts', 'category_id', 'integer REFERENCES prompt_categories(id) ON DELETE SET NULL');
 
   // prompt_usage_logs: 提示词每次使用记录
   await db.schema.createTable('prompt_usage_logs').ifNotExists()
@@ -90,6 +104,8 @@ export async function initSchema() {
     .on('usage_logs').column('entry_id').execute();
   await db.schema.createIndex('idx_prompts_usage').ifNotExists()
     .on('prompts').column('usage_count').execute();
+  await db.schema.createIndex('idx_prompts_category').ifNotExists()
+    .on('prompts').column('category_id').execute();
   await db.schema.createIndex('idx_prompt_usage_entry').ifNotExists()
     .on('prompt_usage_logs').column('prompt_id').execute();
 }

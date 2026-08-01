@@ -3,6 +3,7 @@ import cors from '@koa/cors';
 import toolsRouter from './routes/tools.js';
 import entriesRouter from './routes/entries.js';
 import promptsRouter from './routes/prompts.js';
+import categoriesRouter from './routes/categories.js';
 import statsRouter from './routes/stats.js';
 import { initSchema } from './db.js';
 
@@ -44,6 +45,7 @@ app.use(async (ctx, next) => {
 app.use(toolsRouter.routes()).use(toolsRouter.allowedMethods());
 app.use(entriesRouter.routes()).use(entriesRouter.allowedMethods());
 app.use(promptsRouter.routes()).use(promptsRouter.allowedMethods());
+app.use(categoriesRouter.routes()).use(categoriesRouter.allowedMethods());
 app.use(statsRouter.routes()).use(statsRouter.allowedMethods());
 
 const PORT = process.env.PORT || 3000;

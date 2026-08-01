@@ -4,28 +4,40 @@ import { db, nowIso, parseTags, parseVariables } from '../db.js';
 
 const router = new Router({ prefix: '/api/prompts' });
 
+const SELECT_COLS = [
+  'prompts.id', 'prompts.title', 'prompts.content', 'prompts.purpose',
+  'prompts.tags', 'prompts.variables', 'prompts.source', 'prompts.category_id',
+  'prompts.usage_count', 'prompts.created_at', 'prompts.updated_at',
+  'prompt_categories.name as category_name',
+];
+
 function shapeRow(r) {
   return {
     ...r,
     tags: parseTags(r.tags),
     variables: parseVariables(r.variables),
     usage_count: Number(r.usage_count),
+    category_id: r.category_id ?? null,
   };
 }
 
-// 列表 / 搜索：支持 ?source=&q=&limit=
+// 列表 / 搜索：支持 ?category=&source=&q=&limit=
 // 搜索排序：标题命中(100) > 内容命中(50) > 用途命中(20) > 标签命中(1)，再加 usage_count
 router.get('/', async (ctx) => {
-  const { source, q } = ctx.query;
+  const { source, category, q } = ctx.query;
   const limit = Math.min(Number(ctx.query.limit) || 200, 500);
 
-  let query = db.selectFrom('prompts').select([
-    'prompts.id', 'prompts.title', 'prompts.content', 'prompts.purpose',
-    'prompts.tags', 'prompts.variables', 'prompts.source', 'prompts.usage_count',
-    'prompts.created_at', 'prompts.updated_at',
-  ]);
+  let query = db.selectFrom('prompts')
+    .leftJoin('prompt_categories', 'prompt_categories.id', 'prompts.category_id')
+    .select(SELECT_COLS);
 
   if (source) query = query.where('prompts.source', '=', source);
+  // category=0 表示「未分类」；正数表示该分类
+  if (category !== undefined && category !== '') {
+    const cv = Number(category);
+    if (cv === 0) query = query.where('prompts.category_id', 'is', null);
+    else query = query.where('prompts.category_id', '=', cv);
+  }
 
   if (q && q.trim()) {
     const like = `%${q.trim()}%`;
@@ -58,11 +70,13 @@ router.get('/:id', async (ctx) => {
   ctx.body = row;
 });
 
-// 创建
+// 创建（支持 category_id 或 category_name；category_name 不存在则自动创建）
 router.post('/', async (ctx) => {
   const b = ctx.request.body || {};
-  const { title, content, purpose, tags, variables, source } = b;
+  const { title, content, purpose, tags, variables, source, category_id, category_name } = b;
   if (!title || !title.trim()) ctx.throw(400, 'title required');
+  const catId = await resolveCategoryId(category_id, category_name);
+
   const now = nowIso();
   const r = await db.insertInto('prompts')
     .values({
@@ -72,6 +86,7 @@ router.post('/', async (ctx) => {
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
       variables: JSON.stringify(Array.isArray(variables) ? variables : []),
       source: source || 'manual',
+      category_id: catId,
       usage_count: 0,
       created_at: now,
       updated_at: now,
@@ -91,6 +106,11 @@ router.put('/:id', async (ctx) => {
   if (b.source !== undefined) patch.source = b.source;
   if (b.tags !== undefined) patch.tags = JSON.stringify(Array.isArray(b.tags) ? b.tags : []);
   if (b.variables !== undefined) patch.variables = JSON.stringify(Array.isArray(b.variables) ? b.variables : []);
+  // 分类：可传 category_id / category_name / category=null(置空)
+  if (b.category_id !== undefined || b.category_name !== undefined || b.category !== undefined) {
+    const catId = await resolveCategoryId(b.category_id, b.category_name);
+    patch.category_id = catId;
+  }
 
   await db.updateTable('prompts').set(patch).where('id', '=', id).execute();
   ctx.body = await getById(id);
@@ -128,13 +148,30 @@ router.get('/:id/history', async (ctx) => {
   ctx.body = rows;
 });
 
+// 解析分类 id：优先 category_id；否则按 category_name 查/建；都无则 null
+async function resolveCategoryId(categoryId, categoryName) {
+  if (categoryId !== undefined && categoryId !== null && categoryId !== '') {
+    const cv = Number(categoryId);
+    return cv > 0 ? cv : null;
+  }
+  if (categoryName && String(categoryName).trim()) {
+    const name = String(categoryName).trim();
+    const existing = await db.selectFrom('prompt_categories').select('id').where('name', '=', name).executeTakeFirst();
+    if (existing) return existing.id;
+    const now = nowIso();
+    const r = await db.insertInto('prompt_categories')
+      .values({ name, description: '', created_at: now, updated_at: now })
+      .executeTakeFirst();
+    return Number(r.insertId);
+  }
+  return null;
+}
+
 async function getById(id) {
   const row = await db.selectFrom('prompts')
-    .select([
-      'id', 'title', 'content', 'purpose', 'tags', 'variables', 'source',
-      'usage_count', 'created_at', 'updated_at',
-    ])
-    .where('id', '=', id)
+    .leftJoin('prompt_categories', 'prompt_categories.id', 'prompts.category_id')
+    .select(SELECT_COLS)
+    .where('prompts.id', '=', id)
     .executeTakeFirst();
   return row ? shapeRow(row) : null;
 }

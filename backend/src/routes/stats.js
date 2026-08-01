@@ -14,6 +14,9 @@ router.get('/', async (ctx) => {
   const prompts = await db.selectFrom('prompts')
     .select([(eb) => eb.fn.count('id').as('count'), (eb) => eb.fn.sum('usage_count').as('usage')])
     .executeTakeFirst();
+  const categories = await db.selectFrom('prompt_categories')
+    .select([(eb) => eb.fn.count('id').as('count')])
+    .executeTakeFirst();
 
   ctx.body = {
     entries: Number(entries?.count || 0),
@@ -21,6 +24,7 @@ router.get('/', async (ctx) => {
     usage: Number(entries?.usage || 0),
     prompts: Number(prompts?.count || 0),
     prompt_usage: Number(prompts?.usage || 0),
+    categories: Number(categories?.count || 0),
   };
 });
 
@@ -99,6 +103,21 @@ router.get('/prompts/recent', async (ctx) => {
     .limit(limit)
     .execute();
   ctx.body = rows;
+});
+
+// 提示词按分类汇总
+router.get('/prompts/by-category', async (ctx) => {
+  const rows = await db.selectFrom('prompts')
+    .leftJoin('prompt_categories', 'prompt_categories.id', 'prompts.category_id')
+    .select([
+      'prompt_categories.id', 'prompt_categories.name',
+      (eb) => eb.fn.count('prompts.id').as('entries'),
+      (eb) => eb.fn.sum('prompts.usage_count').as('usage'),
+    ])
+    .groupBy('prompt_categories.id')
+    .orderBy('usage', 'desc')
+    .execute();
+  ctx.body = rows.map((r) => ({ ...r, entries: Number(r.entries), usage: Number(r.usage) }));
 });
 
 export default router;
