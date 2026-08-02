@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNav } from '../nav.jsx';
 import {
   useEntry,
   useHistory,
   useRecordUse,
   useDeleteEntry,
+  useCopyEntry,
+  useVisitEntry,
 } from '../api.js';
 import { Button, Badge, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
 import TemplateModal from '../components/TemplateModal.jsx';
 
-function CopyButton({ text }) {
+function CopyButton({ text, onCopy }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -20,6 +22,7 @@ function CopyButton({ text }) {
         navigator.clipboard?.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 1200);
+        onCopy?.();
       }}
     >
       {copied ? '已复制 ✓' : '⧉ 复制命令'}
@@ -33,7 +36,21 @@ export default function EntryView({ id }) {
   const { data: history } = useHistory(id);
   const recordUse = useRecordUse();
   const del = useDeleteEntry();
+  const copyEntry = useCopyEntry();
+  const visitEntry = useVisitEntry();
   const [tplOpen, setTplOpen] = useState(false);
+  const visitedRef = useRef(false);
+
+  // 详情页停留超过 3 秒记录一次访问
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!visitedRef.current) {
+        visitedRef.current = true;
+        visitEntry.mutate(id);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading)
     return (
@@ -64,6 +81,12 @@ export default function EntryView({ id }) {
           {e.usage_count > 0 && (
             <Badge className="bg-amber-50 text-amber-700">⚡ 使用 {e.usage_count} 次</Badge>
           )}
+          {e.copy_count > 0 && (
+            <Badge className="bg-cyan-50 text-cyan-700">⧉ 复制 {e.copy_count} 次</Badge>
+          )}
+          {e.visit_count > 0 && (
+            <Badge className="bg-rose-50 text-rose-700">👁 访问 {e.visit_count} 次</Badge>
+          )}
           {e.tags?.map((t) => (
             <Badge key={t} className="bg-slate-100 text-slate-600">
               #{t}
@@ -80,7 +103,7 @@ export default function EntryView({ id }) {
             <span className="text-xs font-medium text-slate-500">命令</span>
             <div className="flex gap-1.5">
               <Button variant="subtle" size="sm" onClick={() => setTplOpen(true)}>⌗ 套模板</Button>
-              <CopyButton text={e.command} />
+              <CopyButton text={e.command} onCopy={() => copyEntry.mutate(e.id)} />
             </div>
           </div>
           <pre className="overflow-x-auto rounded bg-slate-900 p-3 font-mono text-sm text-slate-100">
@@ -139,6 +162,7 @@ export default function EntryView({ id }) {
         text={e.command}
         variables={e.variables}
         label="命令"
+        onCopy={() => copyEntry.mutate(e.id)}
       />
     </div>
   );

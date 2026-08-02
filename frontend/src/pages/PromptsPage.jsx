@@ -1,5 +1,5 @@
 import { useNav } from '../nav.jsx';
-import { usePrompts, useCategories } from '../api.js';
+import { usePrompts, useCategories, useCopyPrompt } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
 import { extractVars } from '../components/TemplateModal.jsx';
@@ -15,6 +15,13 @@ export default function PromptsPage({ category, q }) {
   const debounced = useDebounce(q, 250);
   const { data: prompts, isLoading } = usePrompts({ category, q: debounced });
   const { data: categories } = useCategories();
+  const copyPrompt = useCopyPrompt();
+
+  const handleCopy = (e, prompt) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(prompt.content);
+    copyPrompt.mutate(prompt.id);
+  };
 
   // 分类名：'0' = 未分类；正数 = 该分类；无 = 全部
   let title = '全部提示词';
@@ -66,6 +73,12 @@ export default function PromptsPage({ category, q }) {
                       {p.usage_count > 0 && (
                         <Badge className="bg-amber-50 text-amber-700" title="使用次数">⚡ {p.usage_count}</Badge>
                       )}
+                      {p.copy_count > 0 && (
+                        <Badge className="bg-cyan-50 text-cyan-700" title="复制次数">⧉ {p.copy_count}</Badge>
+                      )}
+                      {p.visit_count > 0 && (
+                        <Badge className="bg-rose-50 text-rose-700" title="详情访问">👁 {p.visit_count}</Badge>
+                      )}
                       {vars.length > 0 && (
                         <Badge className="bg-violet-50 text-violet-700" title="模板变量">⌗ {vars.join(', ')}</Badge>
                       )}
@@ -73,7 +86,11 @@ export default function PromptsPage({ category, q }) {
                     <h3 className="font-medium text-slate-800">{p.title}</h3>
                     {p.purpose && <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{p.purpose}</p>}
                     {p.content && (
-                      <p className="mt-2 line-clamp-2 rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
+                      <p
+                        className="mt-2 line-clamp-2 rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600 cursor-pointer hover:bg-slate-200 active:bg-slate-300 transition-colors select-all"
+                        title="点击复制提示词"
+                        onClick={(ev) => handleCopy(ev, p)}
+                      >
                         {p.content}
                       </p>
                     )}

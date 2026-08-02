@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNav } from '../nav.jsx';
 import { usePrompt, useCreatePrompt, useUpdatePrompt, useCategories } from '../api.js';
 import { Button, Input, Textarea, Select, Label, Card, Spinner } from '../components/ui.jsx';
+import CreatableSelect from '../components/CreatableSelect.jsx';
 import Markdown from '../components/Markdown.jsx';
 import { extractVars, renderTemplate } from '../components/TemplateModal.jsx';
 
@@ -9,12 +10,11 @@ const EMPTY = {
   title: '',
   purpose: '',
   source: 'manual',
-  catMode: 'existing',
   category_id: '',
   category_name: '',
   tagsText: '',
   content: '',
-  varDesc: {}, // name -> desc
+  varDesc: {},
 };
 
 export default function PromptForm({ id }) {
@@ -35,7 +35,6 @@ export default function PromptForm({ id }) {
         title: existing.title || '',
         purpose: existing.purpose || '',
         source: existing.source || 'manual',
-        catMode: 'existing',
         category_id: existing.category_id ? String(existing.category_id) : '',
         category_name: '',
         tagsText: (existing.tags || []).join(', '),
@@ -66,13 +65,12 @@ export default function PromptForm({ id }) {
       variables,
     };
     // 分类
-    if (form.catMode === 'existing') {
-      payload.category_id = form.category_id ? Number(form.category_id) : null;
-    } else if (form.catMode === 'new') {
+    if (form.category_id) {
+      payload.category_id = Number(form.category_id);
+    } else if (form.category_name && form.category_name.trim()) {
       payload.category_name = form.category_name.trim();
-    } else if (form.catMode === 'none') {
-      payload.category_id = null;
     }
+    // 两者都空 → 不归类（category_id 不传，后端默认为 null）
     const res = isEdit
       ? await update.mutateAsync({ id, data: payload })
       : await create.mutateAsync(payload);
@@ -121,29 +119,22 @@ export default function PromptForm({ id }) {
         {/* 分类选择 */}
         <div>
           <Label>分类</Label>
-          <div className="flex gap-2">
-            <Select value={form.catMode} onChange={set('catMode')} className="!w-32 !shrink-0">
-              <option value="existing">已有分类</option>
-              <option value="new">新建分类</option>
-              <option value="none">不归类</option>
-            </Select>
-            {form.catMode === 'existing' ? (
-              <Select value={form.category_id} onChange={set('category_id')}>
-                <option value="">（不归类）</option>
-                {categories?.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
-            ) : form.catMode === 'new' ? (
-              <Input
-                value={form.category_name}
-                onChange={set('category_name')}
-                placeholder="新分类名，如：代码审查"
-              />
-            ) : (
-              <Input disabled placeholder="该提示词不归入任何分类" />
-            )}
-          </div>
+          <CreatableSelect
+            options={categories?.map((c) => ({ value: String(c.id), label: c.name })) || []}
+            value={form.category_id ? categories?.find((c) => String(c.id) === form.category_id)?.name : form.category_name || ''}
+            onChange={(val) => {
+              if (val.type === 'existing') {
+                setForm((f) => ({ ...f, category_id: val.value, category_name: '' }));
+              } else if (val.type === 'new') {
+                setForm((f) => ({ ...f, category_name: val.value, category_id: '' }));
+              } else if (val.type === 'none') {
+                setForm((f) => ({ ...f, category_id: '', category_name: '' }));
+              }
+            }}
+            placeholder="选择或新建分类…"
+            allowEmpty
+            emptyLabel="（不归类）"
+          />
         </div>
 
         <div>

@@ -6,13 +6,23 @@ const router = new Router({ prefix: '/api/stats' });
 // 总览：总条目数、总工具数、总使用次数
 router.get('/', async (ctx) => {
   const entries = await db.selectFrom('entries')
-    .select([(eb) => eb.fn.count('id').as('count'), (eb) => eb.fn.sum('usage_count').as('usage')])
+    .select([
+      (eb) => eb.fn.count('id').as('count'),
+      (eb) => eb.fn.sum('usage_count').as('usage'),
+      (eb) => eb.fn.sum('copy_count').as('copies'),
+      (eb) => eb.fn.sum('visit_count').as('visits'),
+    ])
     .executeTakeFirst();
   const tools = await db.selectFrom('tools')
     .select([(eb) => eb.fn.count('id').as('count')])
     .executeTakeFirst();
   const prompts = await db.selectFrom('prompts')
-    .select([(eb) => eb.fn.count('id').as('count'), (eb) => eb.fn.sum('usage_count').as('usage')])
+    .select([
+      (eb) => eb.fn.count('id').as('count'),
+      (eb) => eb.fn.sum('usage_count').as('usage'),
+      (eb) => eb.fn.sum('copy_count').as('copies'),
+      (eb) => eb.fn.sum('visit_count').as('visits'),
+    ])
     .executeTakeFirst();
   const categories = await db.selectFrom('prompt_categories')
     .select([(eb) => eb.fn.count('id').as('count')])
@@ -22,8 +32,12 @@ router.get('/', async (ctx) => {
     entries: Number(entries?.count || 0),
     tools: Number(tools?.count || 0),
     usage: Number(entries?.usage || 0),
+    copies: Number(entries?.copies || 0),
+    visits: Number(entries?.visits || 0),
     prompts: Number(prompts?.count || 0),
     prompt_usage: Number(prompts?.usage || 0),
+    prompt_copies: Number(prompts?.copies || 0),
+    prompt_visits: Number(prompts?.visits || 0),
     categories: Number(categories?.count || 0),
   };
 });

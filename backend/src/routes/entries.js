@@ -10,6 +10,8 @@ function shapeRow(r) {
     tags: parseTags(r.tags),
     variables: parseVariables(r.variables),
     usage_count: Number(r.usage_count),
+    copy_count: Number(r.copy_count || 0),
+    visit_count: Number(r.visit_count || 0),
   };
 }
 
@@ -24,7 +26,7 @@ router.get('/', async (ctx) => {
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
       'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
-      'entries.usage_count',
+      'entries.usage_count', 'entries.copy_count', 'entries.visit_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ]);
@@ -63,7 +65,7 @@ router.get('/:id', async (ctx) => {
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
       'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
-      'entries.usage_count',
+      'entries.usage_count', 'entries.copy_count', 'entries.visit_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ])
@@ -152,6 +154,28 @@ router.post('/:id/use', async (ctx) => {
   ctx.body = await getById(id);
 });
 
+// 记录一次复制
+router.post('/:id/copy', async (ctx) => {
+  const id = Number(ctx.params.id);
+  const now = nowIso();
+  await db.updateTable('entries')
+    .set({ copy_count: sql`copy_count + 1`, updated_at: now })
+    .where('id', '=', id)
+    .execute();
+  ctx.body = await getById(id);
+});
+
+// 记录一次详情页访问
+router.post('/:id/visit', async (ctx) => {
+  const id = Number(ctx.params.id);
+  const now = nowIso();
+  await db.updateTable('entries')
+    .set({ visit_count: sql`visit_count + 1`, updated_at: now })
+    .where('id', '=', id)
+    .execute();
+  ctx.body = await getById(id);
+});
+
 // 某条目的使用历史
 router.get('/:id/history', async (ctx) => {
   const rows = await db.selectFrom('usage_logs')
@@ -169,7 +193,7 @@ async function getById(id) {
     .select([
       'entries.id', 'entries.tool_id', 'entries.title', 'entries.command',
       'entries.purpose', 'entries.content', 'entries.tags', 'entries.variables',
-      'entries.usage_count',
+      'entries.usage_count', 'entries.copy_count', 'entries.visit_count',
       'entries.created_at', 'entries.updated_at',
       'tools.name as tool_name',
     ])

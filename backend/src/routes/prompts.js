@@ -7,7 +7,8 @@ const router = new Router({ prefix: '/api/prompts' });
 const SELECT_COLS = [
   'prompts.id', 'prompts.title', 'prompts.content', 'prompts.purpose',
   'prompts.tags', 'prompts.variables', 'prompts.source', 'prompts.category_id',
-  'prompts.usage_count', 'prompts.created_at', 'prompts.updated_at',
+  'prompts.usage_count', 'prompts.copy_count', 'prompts.visit_count',
+  'prompts.created_at', 'prompts.updated_at',
   'prompt_categories.name as category_name',
 ];
 
@@ -17,6 +18,8 @@ function shapeRow(r) {
     tags: parseTags(r.tags),
     variables: parseVariables(r.variables),
     usage_count: Number(r.usage_count),
+    copy_count: Number(r.copy_count || 0),
+    visit_count: Number(r.visit_count || 0),
     category_id: r.category_id ?? null,
   };
 }
@@ -133,6 +136,28 @@ router.post('/:id/use', async (ctx) => {
     .execute();
   await db.insertInto('prompt_usage_logs')
     .values({ prompt_id: id, note: b.note || '', used_at: now })
+    .execute();
+  ctx.body = await getById(id);
+});
+
+// 记录一次复制
+router.post('/:id/copy', async (ctx) => {
+  const id = Number(ctx.params.id);
+  const now = nowIso();
+  await db.updateTable('prompts')
+    .set({ copy_count: sql`copy_count + 1`, updated_at: now })
+    .where('id', '=', id)
+    .execute();
+  ctx.body = await getById(id);
+});
+
+// 记录一次详情页访问
+router.post('/:id/visit', async (ctx) => {
+  const id = Number(ctx.params.id);
+  const now = nowIso();
+  await db.updateTable('prompts')
+    .set({ visit_count: sql`visit_count + 1`, updated_at: now })
+    .where('id', '=', id)
     .execute();
   ctx.body = await getById(id);
 });

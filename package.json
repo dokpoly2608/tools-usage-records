@@ -6,6 +6,8 @@
   "scripts": {
     "install:all": "npm --prefix backend install && npm --prefix frontend install",
     "seed": "npm --prefix backend run seed",
+    "killports": "eval \"$(grep -E '^(BACKEND_PORT|FRONTEND_PORT)=' .env 2>/dev/null)\" 2>/dev/null; lsof -ti:${BACKEND_PORT:-3031} -ti:${FRONTEND_PORT:-5133} 2>/dev/null | sort -u | xargs kill -9 2>/dev/null; echo 'ports cleared'",
+    "predev": "npm run killports",
     "dev": "concurrently -n backend,frontend -c blue,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",

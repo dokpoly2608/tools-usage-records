@@ -86,6 +86,12 @@ export async function initSchema() {
   // 旧库迁移：prompts 增 category_id 列（已存在则跳过）
   await ensureColumn('prompts', 'category_id', 'integer REFERENCES prompt_categories(id) ON DELETE SET NULL');
 
+  // 旧库迁移：entries/prompts 增 copy_count / visit_count
+  await ensureColumn('entries', 'copy_count', 'integer NOT NULL DEFAULT 0');
+  await ensureColumn('entries', 'visit_count', 'integer NOT NULL DEFAULT 0');
+  await ensureColumn('prompts', 'copy_count', 'integer NOT NULL DEFAULT 0');
+  await ensureColumn('prompts', 'visit_count', 'integer NOT NULL DEFAULT 0');
+
   // prompt_usage_logs: 提示词每次使用记录
   await db.schema.createTable('prompt_usage_logs').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())

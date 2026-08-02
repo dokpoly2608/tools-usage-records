@@ -46,6 +46,8 @@ export const api = {
   updateEntry: (id, d) => req(`/entries/${id}`, { method: 'PUT', body: d }),
   deleteEntry: (id) => req(`/entries/${id}`, { method: 'DELETE' }),
   recordUse: (id, note) => req(`/entries/${id}/use`, { method: 'POST', body: { note: note || '' } }),
+  copyEntry: (id) => req(`/entries/${id}/copy`, { method: 'POST' }),
+  visitEntry: (id) => req(`/entries/${id}/visit`, { method: 'POST' }),
   history: (id) => req(`/entries/${id}/history`),
   // prompts
   prompts: (params) => req('/prompts' + qs(params)),
@@ -54,6 +56,8 @@ export const api = {
   updatePrompt: (id, d) => req(`/prompts/${id}`, { method: 'PUT', body: d }),
   deletePrompt: (id) => req(`/prompts/${id}`, { method: 'DELETE' }),
   recordPromptUse: (id, note) => req(`/prompts/${id}/use`, { method: 'POST', body: { note: note || '' } }),
+  copyPrompt: (id) => req(`/prompts/${id}/copy`, { method: 'POST' }),
+  visitPrompt: (id) => req(`/prompts/${id}/visit`, { method: 'POST' }),
   promptHistory: (id) => req(`/prompts/${id}/history`),
   // categories
   categories: () => req('/categories'),
@@ -193,6 +197,28 @@ export function useRecordUse() {
   });
 }
 
+export function useCopyEntry() {
+  const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.copyEntry(id),
+    onSuccess: (_data, id) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['entry', id] });
+    },
+  });
+}
+
+export function useVisitEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.visitEntry(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['entry', id] });
+    },
+  });
+}
+
 export function useCreateTool() {
   const qc = useQueryClient();
   return useMutation({
@@ -256,6 +282,28 @@ export function useRecordPromptUse() {
       invalidate();
       qc.invalidateQueries({ queryKey: ['prompt', id] });
       qc.invalidateQueries({ queryKey: ['prompt-history', id] });
+    },
+  });
+}
+
+export function useCopyPrompt() {
+  const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.copyPrompt(id),
+    onSuccess: (_data, id) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ['prompt', id] });
+    },
+  });
+}
+
+export function useVisitPrompt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.visitPrompt(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['prompt', id] });
     },
   });
 }

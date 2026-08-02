@@ -1,5 +1,5 @@
 import { useNav } from '../nav.jsx';
-import { useEntries, useTools } from '../api.js';
+import { useEntries, useTools, useCopyEntry } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
 
@@ -8,8 +8,15 @@ export default function HomePage({ toolId, q }) {
   const debounced = useDebounce(q, 250);
   const { data: entries, isLoading } = useEntries({ tool: toolId, q: debounced });
   const { data: tools } = useTools();
+  const copyEntry = useCopyEntry();
 
   const toolName = toolId ? tools?.find((t) => t.id === toolId)?.name : null;
+
+  const handleCopy = (e, entry) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(entry.command);
+    copyEntry.mutate(entry.id);
+  };
 
   return (
     <div>
@@ -60,13 +67,27 @@ export default function HomePage({ toolId, q }) {
                         ⚡ {e.usage_count}
                       </Badge>
                     )}
+                    {e.copy_count > 0 && (
+                      <Badge className="bg-cyan-50 text-cyan-700" title="复制次数">
+                        ⧉ {e.copy_count}
+                      </Badge>
+                    )}
+                    {e.visit_count > 0 && (
+                      <Badge className="bg-rose-50 text-rose-700" title="详情访问">
+                        👁 {e.visit_count}
+                      </Badge>
+                    )}
                   </div>
                   <h3 className="font-medium text-slate-800">{e.title}</h3>
                   {e.purpose && (
                     <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{e.purpose}</p>
                   )}
                   {e.command && (
-                    <code className="mt-2 block truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+                    <code
+                      className="mt-2 block truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 cursor-pointer hover:bg-slate-200 active:bg-slate-300 transition-colors select-all"
+                      title="点击复制命令"
+                      onClick={(ev) => handleCopy(ev, e)}
+                    >
                       {e.command}
                     </code>
                   )}

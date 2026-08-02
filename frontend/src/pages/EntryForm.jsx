@@ -6,12 +6,13 @@ import {
   useCreateEntry,
   useUpdateEntry,
 } from '../api.js';
-import { Button, Input, Textarea, Select, Label, Card, Spinner } from '../components/ui.jsx';
+import { Button, Input, Textarea, Label, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
 import { extractVars } from '../components/TemplateModal.jsx';
 
+import CreatableSelect from '../components/CreatableSelect.jsx';
+
 const EMPTY = {
-  toolMode: 'existing',
   tool_id: '',
   tool_name: '',
   title: '',
@@ -37,7 +38,6 @@ export default function EntryForm({ id }) {
       const varDesc = {};
       for (const v of existing.variables || []) varDesc[v.name] = v.desc || '';
       setForm({
-        toolMode: 'existing',
         tool_id: String(existing.tool_id),
         tool_name: '',
         title: existing.title || '',
@@ -73,12 +73,12 @@ export default function EntryForm({ id }) {
       tags,
       variables,
     };
-    if (form.toolMode === 'existing') {
-      if (!form.tool_id) return;
+    if (form.tool_id) {
       payload.tool_id = Number(form.tool_id);
-    } else {
-      if (!form.tool_name.trim()) return;
+    } else if (form.tool_name.trim()) {
       payload.tool_name = form.tool_name.trim();
+    } else {
+      return;
     }
     const res = isEdit
       ? await update.mutateAsync({ id, data: payload })
@@ -112,29 +112,18 @@ export default function EntryForm({ id }) {
         {/* 工具选择 */}
         <div>
           <Label>工具</Label>
-          <div className="flex gap-2">
-            <Select value={form.toolMode} onChange={set('toolMode')} className="!w-32 !shrink-0">
-              <option value="existing">已有工具</option>
-              <option value="new">新建工具</option>
-            </Select>
-            {form.toolMode === 'existing' ? (
-              <Select value={form.tool_id} onChange={set('tool_id')} required>
-                <option value="">选择工具…</option>
-                {tools?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </Select>
-            ) : (
-              <Input
-                value={form.tool_name}
-                onChange={set('tool_name')}
-                placeholder="新工具名，如 docker / kubectl"
-                required
-              />
-            )}
-          </div>
+          <CreatableSelect
+            options={tools?.map((t) => ({ value: String(t.id), label: t.name })) || []}
+            value={form.tool_id ? tools?.find((t) => String(t.id) === form.tool_id)?.name : form.tool_name || ''}
+            onChange={(val) => {
+              if (val.type === 'existing') {
+                setForm((f) => ({ ...f, tool_id: val.value, tool_name: '' }));
+              } else if (val.type === 'new') {
+                setForm((f) => ({ ...f, tool_name: val.value, tool_id: '' }));
+              }
+            }}
+            placeholder="选择或新建工具…"
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

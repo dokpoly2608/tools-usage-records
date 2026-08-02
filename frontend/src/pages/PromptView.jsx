@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNav } from '../nav.jsx';
 import {
   usePrompt,
   usePromptHistory,
   useRecordPromptUse,
   useDeletePrompt,
+  useCopyPrompt,
+  useVisitPrompt,
 } from '../api.js';
 import { Button, Badge, Card, Spinner } from '../components/ui.jsx';
 import Markdown from '../components/Markdown.jsx';
@@ -22,7 +24,21 @@ export default function PromptView({ id }) {
   const { data: history } = usePromptHistory(id);
   const recordUse = useRecordPromptUse();
   const del = useDeletePrompt();
+  const copyPrompt = useCopyPrompt();
+  const visitPrompt = useVisitPrompt();
   const [tplOpen, setTplOpen] = useState(false);
+  const visitedRef = useRef(false);
+
+  // 详情页停留超过 3 秒记录一次访问
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!visitedRef.current) {
+        visitedRef.current = true;
+        visitPrompt.mutate(id);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading)
     return (
@@ -51,6 +67,12 @@ export default function PromptView({ id }) {
           )}
           <Badge className="bg-emerald-50 text-emerald-700">{SOURCE_LABEL[p.source] || p.source}</Badge>
           {p.usage_count > 0 && <Badge className="bg-amber-50 text-amber-700">⚡ 使用 {p.usage_count} 次</Badge>}
+          {p.copy_count > 0 && (
+            <Badge className="bg-cyan-50 text-cyan-700">⧉ 复制 {p.copy_count} 次</Badge>
+          )}
+          {p.visit_count > 0 && (
+            <Badge className="bg-rose-50 text-rose-700">👁 访问 {p.visit_count} 次</Badge>
+          )}
           {p.tags?.map((t) => (
             <Badge key={t} className="bg-slate-100 text-slate-600">#{t}</Badge>
           ))}
@@ -107,6 +129,7 @@ export default function PromptView({ id }) {
         text={p.content}
         variables={p.variables}
         label="提示词"
+        onCopy={() => copyPrompt.mutate(p.id)}
       />
     </div>
   );

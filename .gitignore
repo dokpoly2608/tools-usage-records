@@ -6,3 +6,4 @@ backend/data/*.sqlite-*
 *.log
 .DS_Store
 .env
+.playwright-mcp/

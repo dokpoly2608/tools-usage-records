@@ -35,18 +35,23 @@ export default function StatsPage() {
       </div>
     );
 
-  const o = overview.data || { entries: 0, tools: 0, usage: 0, prompts: 0, prompt_usage: 0 };
+  const o = overview.data || { entries: 0, tools: 0, usage: 0, copies: 0, visits: 0, prompts: 0, prompt_usage: 0, prompt_copies: 0, prompt_visits: 0 };
+  const totalUsage = (o.usage || 0) + (o.prompt_usage || 0);
+  const totalCopies = (o.copies || 0) + (o.prompt_copies || 0);
+  const totalVisits = (o.visits || 0) + (o.prompt_visits || 0);
   const maxUsage = Math.max(1, ...(top.data || []).map((x) => x.usage_count));
 
   return (
     <div className="space-y-5">
       <h1 className="text-lg font-semibold text-slate-800">使用统计</h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="命令条目" value={o.entries} />
         <StatCard label="提示词" value={o.prompts} />
         <StatCard label="工具数" value={o.tools} />
-        <StatCard label="累计使用" value={o.usage + (o.prompt_usage || 0)} hint="命令 + 提示词" />
+        <StatCard label="累计使用" value={totalUsage} hint="命令 + 提示词" />
+        <StatCard label="累计复制" value={totalCopies} hint="命令 + 提示词" />
+        <StatCard label="累计访问" value={totalVisits} hint="详情页" />
       </div>
 
       <Card className="p-4">

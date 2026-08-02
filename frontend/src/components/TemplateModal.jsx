@@ -27,7 +27,7 @@ export function renderTemplate(text, values) {
 }
 
 // 套模板弹窗：命令与提示词共用
-export default function TemplateModal({ open, onClose, text, variables = [], label = '内容' }) {
+export default function TemplateModal({ open, onClose, text, variables = [], label = '内容', onCopy }) {
   const varNames = useMemo(() => extractVars(text), [text]);
   const varMeta = useMemo(() => {
     const map = {};
@@ -52,6 +52,7 @@ export default function TemplateModal({ open, onClose, text, variables = [], lab
 
   const copy = () => {
     navigator.clipboard?.writeText(rendered);
+    onCopy?.();
   };
 
   return (
