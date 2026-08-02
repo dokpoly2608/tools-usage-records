@@ -1,0 +1,26 @@
+# 依赖与构建产物（镜像内重新生成，不进构建上下文）
+node_modules
+**/node_modules
+frontend/dist
+backend/dist
+
+# 本地数据 / 机密 —— 绝不入镜像（公共仓库构建本就不会出现，双保险）
+backend/data/*.sqlite
+backend/data/*.sqlite-*
+backend/data/*.db
+.env
+.env.*
+!.env.example
+
+# 本地杂项
+.git
+.gitattributes
+.playwright-mcp
+.tmp
+*.log
+.DS_Store
+
+# Claude / 编辑器
+.claude
+.vscode
+.idea
