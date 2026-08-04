@@ -12,7 +12,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SQLITE = path.join(__dirname, '..', 'data', 'kb.sqlite');
+// 源 SQLite 路径可用 SQLITE_PATH 指定（如导出的快照）；默认本地开发库
+const SQLITE = process.env.SQLITE_PATH || path.join(__dirname, '..', 'data', 'kb.sqlite');
 // 按外键依赖顺序：被引用的表先导
 const TABLES = ['tools', 'entries', 'usage_logs', 'prompt_categories', 'prompts', 'prompt_usage_logs'];
 
