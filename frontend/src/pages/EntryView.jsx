@@ -9,6 +9,7 @@ import {
   useVisitEntry,
 } from '../api.js';
 import { Button, Badge, Card, Spinner } from '../components/ui.jsx';
+import { copyText } from '../lib/clipboard.js';
 import Markdown from '../components/Markdown.jsx';
 import TemplateModal from '../components/TemplateModal.jsx';
 
@@ -19,7 +20,7 @@ function CopyButton({ text, onCopy }) {
       variant="subtle"
       size="sm"
       onClick={() => {
-        navigator.clipboard?.writeText(text);
+        copyText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 1200);
         onCopy?.();

@@ -1,6 +1,7 @@
 import { useNav } from '../nav.jsx';
 import { usePrompts, useCategories, useCopyPrompt } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
+import { copyText } from '../lib/clipboard.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
 import { extractVars } from '../components/TemplateModal.jsx';
 
@@ -19,7 +20,7 @@ export default function PromptsPage({ category, q }) {
 
   const handleCopy = (e, prompt) => {
     e.stopPropagation();
-    navigator.clipboard?.writeText(prompt.content);
+    copyText(prompt.content);
     copyPrompt.mutate(prompt.id);
   };
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Button, Input, Label } from './ui.jsx';
+import { copyText } from '../lib/clipboard.js';
 
 // 从文本中提取 {{var}} 变量名（按首次出现顺序，去重）
 export function extractVars(text) {
@@ -51,7 +52,7 @@ export default function TemplateModal({ open, onClose, text, variables = [], lab
   const hasVars = varNames.length > 0;
 
   const copy = () => {
-    navigator.clipboard?.writeText(rendered);
+    copyText(rendered);
     onCopy?.();
   };
 

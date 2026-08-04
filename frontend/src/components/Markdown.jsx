@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { copyText } from '../lib/clipboard.js';
 
 // 从 React 子节点里递归取出纯文本，用于复制代码块
 function nodeText(node) {
@@ -19,7 +20,7 @@ function PreWithCopy({ children, ...props }) {
       <button
         type="button"
         onClick={() => {
-          navigator.clipboard?.writeText(text);
+          copyText(text);
           setCopied(true);
           setTimeout(() => setCopied(false), 1200);
         }}

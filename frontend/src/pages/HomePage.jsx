@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useNav } from '../nav.jsx';
-import { useEntries, useTools, useCopyEntry } from '../api.js';
+import { useEntries, useTools, useCopyEntry, useRecordUse } from '../api.js';
 import { useDebounce } from '../lib/useDebounce.js';
+import { copyText } from '../lib/clipboard.js';
 import { Card, Badge, Button, Spinner, EmptyState } from '../components/ui.jsx';
+import TemplateModal from '../components/TemplateModal.jsx';
 
 export default function HomePage({ toolId, q }) {
   const { navigate } = useNav();
@@ -9,13 +12,21 @@ export default function HomePage({ toolId, q }) {
   const { data: entries, isLoading } = useEntries({ tool: toolId, q: debounced });
   const { data: tools } = useTools();
   const copyEntry = useCopyEntry();
+  const recordUse = useRecordUse();
+  const [tplEntry, setTplEntry] = useState(null);
 
   const toolName = toolId ? tools?.find((t) => t.id === toolId)?.name : null;
 
   const handleCopy = (e, entry) => {
     e.stopPropagation();
-    navigator.clipboard?.writeText(entry.command);
+    copyText(entry.command);
     copyEntry.mutate(entry.id);
+  };
+
+  // 打开套模板：记一次使用（usage_count +1）
+  const openTemplate = (entry) => {
+    setTplEntry(entry);
+    recordUse.mutate({ id: entry.id });
   };
 
   return (
@@ -83,13 +94,27 @@ export default function HomePage({ toolId, q }) {
                     <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{e.purpose}</p>
                   )}
                   {e.command && (
-                    <code
-                      className="mt-2 block truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 cursor-pointer hover:bg-slate-200 active:bg-slate-300 transition-colors select-all"
-                      title="点击复制命令"
-                      onClick={(ev) => handleCopy(ev, e)}
-                    >
-                      {e.command}
-                    </code>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code
+                        className="block flex-1 truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 cursor-pointer hover:bg-slate-200 active:bg-slate-300 transition-colors select-all"
+                        title="点击复制命令"
+                        onClick={(ev) => handleCopy(ev, e)}
+                      >
+                        {e.command}
+                      </code>
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        className="shrink-0"
+                        title="套模板"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          openTemplate(e);
+                        }}
+                      >
+                        ⌗ 套模板
+                      </Button>
+                    </div>
                   )}
                   {e.tags?.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -110,6 +135,15 @@ export default function HomePage({ toolId, q }) {
           ))}
         </div>
       )}
+
+      <TemplateModal
+        open={!!tplEntry}
+        onClose={() => setTplEntry(null)}
+        text={tplEntry?.command}
+        variables={tplEntry?.variables}
+        label="命令"
+        onCopy={() => tplEntry && copyEntry.mutate(tplEntry.id)}
+      />
     </div>
   );
 }
