@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npx tsx watch src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "migrate": "node src/migrate-sqlite-to-mysql.mjs"
   },
   "dependencies": {
     "@koa/cors": "^5.0.0",
