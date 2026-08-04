@@ -11,8 +11,8 @@
   "dependencies": {
     "@koa/cors": "^5.0.0",
     "@koa/router": "^13.1.0",
-    "better-sqlite3": "^11.8.1",
     "koa": "^3.0.0",
-    "kysely": "^0.28.2"
+    "kysely": "^0.28.2",
+    "mysql2": "^3.23.2"
   }
 }

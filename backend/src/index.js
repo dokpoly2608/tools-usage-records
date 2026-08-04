@@ -1,3 +1,4 @@
+import './env.js'; // 注入 .env（db.js 也各自 import，保证连接参数可用）
 import Koa from 'koa';
 import cors from '@koa/cors';
 import fs from 'node:fs';
@@ -10,17 +11,7 @@ import categoriesRouter from './routes/categories.js';
 import statsRouter from './routes/stats.js';
 import { initSchema } from './db.js';
 
-// 轻量读取根目录 .env（无需 dotenv 依赖）。已存在的同名环境变量优先。
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const envFile = path.join(__dirname, '..', '..', '.env');
-if (fs.existsSync(envFile)) {
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (!m) continue;
-    const val = m[2].replace(/^["']|["']$/g, '');
-    if (process.env[m[1]] === undefined) process.env[m[1]] = val;
-  }
-}
 
 const app = new Koa();
 

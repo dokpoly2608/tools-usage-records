@@ -1,22 +1,23 @@
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
-import { Kysely, SqliteDialect } from 'kysely';
+import './env.js'; // 必须最先：注入 .env，确保下方 process.env 可读
+import mysql from 'mysql2';
+import { Kysely, MysqlDialect, sql } from 'kysely';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-fs.mkdirSync(dataDir, { recursive: true });
-const dbPath = path.join(dataDir, 'kb.sqlite');
+// 连接参数全部走环境变量：本地读 .env，远程部署用 `DB_HOST=... node ...` 注入。
+// index.js 启动时已把根目录 .env 注入 process.env，故此处直接读取。
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'tools_kb',
+  waitForConnections: true,
+  connectionLimit: Number(process.env.DB_POOL_SIZE) || 10,
+  charset: 'utf8mb4',
+  // 连接超时：远程库不可达时快速失败，便于排错
+  connectTimeout: 10_000,
+});
 
-// better-sqlite3 实例：开启 WAL + 外键
-const sqlite = new Database(dbPath);
-sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = ON');
-
-// 注：SqliteDialect 的构造参数在 0.27.x 及之前为 { database }（传实例）；
-// 0.28 之后若 API 变化，这里是最可能需要调整的点。
-const dialect = new SqliteDialect({ database: sqlite });
+const dialect = new MysqlDialect({ pool });
 
 export const db = new Kysely({ dialect });
 
@@ -24,10 +25,10 @@ export async function initSchema() {
   // tools: 工具（git / jq / claude …）
   await db.schema.createTable('tools').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
-    .addColumn('name', 'text', (c) => c.notNull().unique())
-    .addColumn('description', 'text', (c) => c.defaultTo(''))
-    .addColumn('created_at', 'text', (c) => c.notNull())
-    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .addColumn('name', 'varchar(100)', (c) => c.notNull().unique())
+    .addColumn('description', 'varchar(500)', (c) => c.defaultTo(''))
+    .addColumn('created_at', 'varchar(30)', (c) => c.notNull())
+    .addColumn('updated_at', 'varchar(30)', (c) => c.notNull())
     .execute();
 
   // entries: 命令用法知识条目
@@ -35,92 +36,83 @@ export async function initSchema() {
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
     .addColumn('tool_id', 'integer', (c) =>
       c.notNull().references('tools.id').onDelete('cascade'))
-    .addColumn('title', 'text', (c) => c.notNull())
-    .addColumn('command', 'text', (c) => c.defaultTo(''))
-    .addColumn('purpose', 'text', (c) => c.defaultTo(''))
-    .addColumn('content', 'text', (c) => c.defaultTo(''))
-    .addColumn('tags', 'text', (c) => c.defaultTo('[]'))
-    .addColumn('variables', 'text', (c) => c.defaultTo('[]')) // 命令模板变量 JSON
+    .addColumn('title', 'varchar(500)', (c) => c.notNull())
+    .addColumn('command', 'varchar(2000)', (c) => c.defaultTo(''))
+    .addColumn('purpose', 'varchar(1000)', (c) => c.defaultTo(''))
+    .addColumn('content', 'text') // markdown 正文，可能较长，用 text（MySQL 5.7 text 无 default）
+    .addColumn('tags', 'varchar(1000)', (c) => c.defaultTo('[]'))
+    .addColumn('variables', 'varchar(2000)', (c) => c.defaultTo('[]')) // 命令模板变量 JSON
     .addColumn('usage_count', 'integer', (c) => c.defaultTo(0).notNull())
-    .addColumn('created_at', 'text', (c) => c.notNull())
-    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .addColumn('copy_count', 'integer', (c) => c.defaultTo(0).notNull())
+    .addColumn('visit_count', 'integer', (c) => c.defaultTo(0).notNull())
+    .addColumn('created_at', 'varchar(30)', (c) => c.notNull())
+    .addColumn('updated_at', 'varchar(30)', (c) => c.notNull())
     .execute();
-
-  // 旧库迁移：entries 增 variables 列（已存在则跳过）
-  await ensureColumn('entries', 'variables', 'text NOT NULL DEFAULT "[]"');
 
   // usage_logs: 命令每次使用记录（历史明细）
   await db.schema.createTable('usage_logs').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
     .addColumn('entry_id', 'integer', (c) =>
       c.notNull().references('entries.id').onDelete('cascade'))
-    .addColumn('note', 'text', (c) => c.defaultTo(''))
-    .addColumn('used_at', 'text', (c) => c.notNull())
+    .addColumn('note', 'varchar(2000)', (c) => c.defaultTo(''))
+    .addColumn('used_at', 'varchar(30)', (c) => c.notNull())
     .execute();
 
   // prompt_categories: 提示词分类（按用途/场景，独立表）—— 先于 prompts 建立以供外键引用
   await db.schema.createTable('prompt_categories').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
-    .addColumn('name', 'text', (c) => c.notNull().unique())
-    .addColumn('description', 'text', (c) => c.defaultTo(''))
-    .addColumn('created_at', 'text', (c) => c.notNull())
-    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .addColumn('name', 'varchar(100)', (c) => c.notNull().unique())
+    .addColumn('description', 'varchar(500)', (c) => c.defaultTo(''))
+    .addColumn('created_at', 'varchar(30)', (c) => c.notNull())
+    .addColumn('updated_at', 'varchar(30)', (c) => c.notNull())
     .execute();
 
   // prompts: AI 提示词知识条目（独立于 entries/tools）
   await db.schema.createTable('prompts').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
-    .addColumn('title', 'text', (c) => c.notNull())
-    .addColumn('content', 'text', (c) => c.defaultTo('')) // 提示词原文，可含 {{var}}
-    .addColumn('purpose', 'text', (c) => c.defaultTo(''))
-    .addColumn('tags', 'text', (c) => c.defaultTo('[]'))
-    .addColumn('variables', 'text', (c) => c.defaultTo('[]')) // 模板变量 JSON
-    .addColumn('source', 'text', (c) => c.defaultTo('manual')) // claude-code / codex / manual
+    .addColumn('title', 'varchar(500)', (c) => c.notNull())
+    .addColumn('content', 'text') // 提示词原文，可含 {{var}}
+    .addColumn('purpose', 'varchar(1000)', (c) => c.defaultTo(''))
+    .addColumn('tags', 'varchar(1000)', (c) => c.defaultTo('[]'))
+    .addColumn('variables', 'varchar(2000)', (c) => c.defaultTo('[]')) // 模板变量 JSON
+    .addColumn('source', 'varchar(50)', (c) => c.defaultTo('manual')) // claude-code / codex / manual
     .addColumn('category_id', 'integer', (c) => // 可空，归类用
       c.references('prompt_categories.id').onDelete('set null'))
     .addColumn('usage_count', 'integer', (c) => c.defaultTo(0).notNull())
-    .addColumn('created_at', 'text', (c) => c.notNull())
-    .addColumn('updated_at', 'text', (c) => c.notNull())
+    .addColumn('copy_count', 'integer', (c) => c.defaultTo(0).notNull())
+    .addColumn('visit_count', 'integer', (c) => c.defaultTo(0).notNull())
+    .addColumn('created_at', 'varchar(30)', (c) => c.notNull())
+    .addColumn('updated_at', 'varchar(30)', (c) => c.notNull())
     .execute();
-
-  // 旧库迁移：prompts 增 category_id 列（已存在则跳过）
-  await ensureColumn('prompts', 'category_id', 'integer REFERENCES prompt_categories(id) ON DELETE SET NULL');
-
-  // 旧库迁移：entries/prompts 增 copy_count / visit_count
-  await ensureColumn('entries', 'copy_count', 'integer NOT NULL DEFAULT 0');
-  await ensureColumn('entries', 'visit_count', 'integer NOT NULL DEFAULT 0');
-  await ensureColumn('prompts', 'copy_count', 'integer NOT NULL DEFAULT 0');
-  await ensureColumn('prompts', 'visit_count', 'integer NOT NULL DEFAULT 0');
 
   // prompt_usage_logs: 提示词每次使用记录
   await db.schema.createTable('prompt_usage_logs').ifNotExists()
     .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
     .addColumn('prompt_id', 'integer', (c) =>
       c.notNull().references('prompts.id').onDelete('cascade'))
-    .addColumn('note', 'text', (c) => c.defaultTo(''))
-    .addColumn('used_at', 'text', (c) => c.notNull())
+    .addColumn('note', 'varchar(2000)', (c) => c.defaultTo(''))
+    .addColumn('used_at', 'varchar(30)', (c) => c.notNull())
     .execute();
 
-  // 常用查询索引
-  await db.schema.createIndex('idx_entries_tool').ifNotExists()
-    .on('entries').column('tool_id').execute();
-  await db.schema.createIndex('idx_entries_usage').ifNotExists()
-    .on('entries').column('usage_count').execute();
-  await db.schema.createIndex('idx_usage_entry').ifNotExists()
-    .on('usage_logs').column('entry_id').execute();
-  await db.schema.createIndex('idx_prompts_usage').ifNotExists()
-    .on('prompts').column('usage_count').execute();
-  await db.schema.createIndex('idx_prompts_category').ifNotExists()
-    .on('prompts').column('category_id').execute();
-  await db.schema.createIndex('idx_prompt_usage_entry').ifNotExists()
-    .on('prompt_usage_logs').column('prompt_id').execute();
+  // 常用查询索引（MySQL 不支持 CREATE INDEX IF NOT EXISTS，先查 information_schema）
+  await ensureIndex('idx_entries_tool', 'entries', 'tool_id');
+  await ensureIndex('idx_entries_usage', 'entries', 'usage_count');
+  await ensureIndex('idx_usage_entry', 'usage_logs', 'entry_id');
+  await ensureIndex('idx_prompts_usage', 'prompts', 'usage_count');
+  await ensureIndex('idx_prompts_category', 'prompts', 'category_id');
+  await ensureIndex('idx_prompt_usage_entry', 'prompt_usage_logs', 'prompt_id');
 }
 
-// 安全加列：列已存在则跳过（SQLite ALTER TABLE 无 IF NOT EXISTS）
-async function ensureColumn(table, column, definition) {
-  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all();
-  if (cols.some((c) => c.name === column)) return;
-  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+// 安全建索引：MySQL 不支持 IF NOT EXISTS，通过 information_schema 判断后建。
+async function ensureIndex(name, table, column) {
+  const { rows } = await sql`
+    SELECT 1 FROM information_schema.statistics
+    WHERE table_schema = DATABASE() AND table_name = ${table} AND index_name = ${name}
+    LIMIT 1
+  `.execute(db);
+  if (rows.length) return;
+  // name/table/column 为代码内常量，非外部输入，直接拼接标识符
+  await sql.raw(`CREATE INDEX ${name} ON ${table} (${column})`).execute(db);
 }
 
 // tags 以 JSON 数组字符串存储，读取时解析

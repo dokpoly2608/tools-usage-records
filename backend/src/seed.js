@@ -147,7 +147,7 @@ async function main() {
   const count = await db.selectFrom('entries').select((eb) => eb.fn.count('id').as('c')).executeTakeFirst();
   if (Number(count?.c || 0) > 0) {
     // eslint-disable-next-line no-console
-    console.log(`⚠️  已有 ${count.c} 条数据，跳过 seed（如需重置请删除 backend/data/kb.sqlite）`);
+    console.log(`⚠️  已有 ${count.c} 条数据，跳过 seed（如需重置请清空 ${process.env.DB_NAME || 'tools_kb'} 数据库的表）`);
     return;
   }
 
